@@ -54,24 +54,29 @@ longtoascii:	move.l %d0,-(%sp)
 | hold the number of hex digits converted. on error, d1 will be 0
 
 asciitoint:	move.w %d2,-(%sp)
-		move.l #0,%d0
+		move.l #0,%d0			| set result to zero
 		move.b #0,%d1			| clear digit counter
-		move.b (%a0)+,%d2		| get the first char
-		cmp.b #'!,%d2			| see if it is a nonwsp char
-		bls 3f				| out right away
+		bra 3f				| branch into loop
 1:		sub.b #'0,%d2			| subtract '0'
+		blt 4f				| <0? bad
 		cmp.b #0x09,%d2			| less then or equal to 9?
 		bls 2f				| yes? we are done with this
 		sub.b #'A'-':,%d2		| subtract diff 'A'-':'
-		cmp.b #0x10,%d2
+		blt 4f				| <0? bad
+		cmp.b #0x10,%d2			| see if it is uppercase
 		blt 2f				| was uppercase
 		sub.b #'a-'A,%d2		| was lowercase
-2:		add.b %d2,%d0
+		cmp.b #0x10,%d2			| compare with upper range
+		bge 4f				| >15? bad
+2:		asl.l #4,%d0			| shift val to next nybble
+		add.b %d2,%d0			| accumulate number
 		add.b #1,%d1			| inc digit counter
-		move.b (%a0)+,%d2
+		cmp.b #8,%d1			| too many digits?
+		bgt 4f				| yes? bad
+3:		move.b (%a0)+,%d2		| get the next character
 		cmp.b #'!,%d2			| see if it is a nonwsp char
-		bls 3f
-		asl.l #4,%d0			| shift to next nyblle
-		bra 1b
-3:		move.w (%sp)+,%d2
+		bls 5f				| yes? then we are done
+		bra 1b				| back for more digits
+4:		move.b #0,%d1			| mark 0 digits
+5:		move.w (%sp)+,%d2
 		rts
