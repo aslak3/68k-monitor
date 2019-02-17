@@ -1,0 +1,12 @@
+MEMORY
+{
+	RAM(RWX) : ORIGIN = 0x000000, LENGTH = 1024K
+  	ROM(RX) : ORIGIN = 0xf00000, LENGTH = 64K
+}
+
+SECTIONS
+{
+	.bss 0x000000 : { *(.bss) } > RAM
+	.text 0xf00800 : { *(.text) } > ROM
+	.rodata : { *(.rodata) } > ROM
+}
