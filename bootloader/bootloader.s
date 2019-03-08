@@ -44,7 +44,9 @@ resetpc:	.long _start			| the initial pc
 
 		.section .text
 
-_start:		move.b #0b00010011,MR1A2681	| 8n
+_start:		move.b #0x00,SYSCONF		| write protect eeprom
+
+		move.b #0b00010011,MR1A2681	| 8n
 		move.b #0b00000111,MR2A2681	| one full stop bit
 		move.b #0b10111011,CSRA2681	| 9600
 		move.b #0b00000101,CRA2681	| enable rx and tx
@@ -108,7 +110,7 @@ pagestart:	movea.l #sixtyfourbytes,%a0	| ram copy of page
 1:		move.l (%a0)+,(%a1)+		| save it to realrom
 		dbra %d1,1b			| back for more
 
-		move.w #0xe000,%d0		| delay, maybe 10ms?
+		move.w #0xff00,%d0		| delay, maybe 10ms?
 1:		dbra %d0,1b
 
 		move.b #0x23,%d0		| "#"

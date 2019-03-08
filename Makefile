@@ -9,7 +9,7 @@ OBJS = main.o serial.o strings.o
 all: $(BIN)
 
 %.o: %.s include/hardware.i
-	$(AS) -mcpu=68000 $< -o $@
+	$(AS) -mcpu=68000 --fatal-warnings $< -o $@
 
 monitor.elf: $(OBJS)
 	$(LD) -T linker.scr -nostdlib $^ -o $@

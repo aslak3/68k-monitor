@@ -50,12 +50,30 @@ longtoascii:	move.l %d0,-(%sp)
 		move.l (%sp)+,%d0
 		rts
 
-| convert the string at a0 to a integer. d0 will hold the value, d1 will
-| hold the number of hex digits converted. on error, d1 will be 0
+| table of number of digits to type, used by the below sub
 
-asciitoint:	move.w %d2,-(%sp)
+datatypetable:	.byte 0				| 0
+
+		.byte 1				| 1
+		.byte 1				| 2
+
+two:		.byte 2				| 3
+		.byte 2				| 4
+
+		.byte 3				| 5
+		.byte 3				| 6
+		.byte 3				| 7
+		.byte 3				| 8
+
+		.byte 0				| padding
+
+| convert the string at a0 to a integer. d0 will hold the value, d1 will
+| hold the type (1=byte, 2=word, 3=long). on error, d1 will be 0.
+| a0 will be moved to the first non printable char.
+
+asciitoint:	movem.l %a1/%d2,-(%sp)
 		move.l #0,%d0			| set result to zero
-		move.b #0,%d1			| clear digit counter
+		move.w #0,%d1			| clear digit counter
 		bra 3f				| branch into loop
 1:		sub.b #'0,%d2			| subtract '0'
 		blt 4f				| <0? bad
@@ -78,5 +96,7 @@ asciitoint:	move.w %d2,-(%sp)
 		bls 5f				| yes? then we are done
 		bra 1b				| back for more digits
 4:		move.b #0,%d1			| mark 0 digits
-5:		move.w (%sp)+,%d2
+5:		movea.l #datatypetable,%a1	| get start of table
+		move.b (%d1.w,%a1),%d1		| translate to type
+		movem.l (%sp)+,%d2/%a1
 		rts
