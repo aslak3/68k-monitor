@@ -6,48 +6,67 @@
 
 start:		bsr serialinit
 
-		movea.l #buffer,%a1
+loop:		lea (newlinemsg,%pc),%a0
+		bsr putstring
 
-loop:		lea (enternumbermsg,%pc),%a0	| grab the greeting in a0
+		lea (entercmdmsg,%pc),%a0	| grab the greeting in a0
 		bsr putstring			| send it
-		movea.l %a1,%a0
+		movea.l #inputbuffer,%a0
 		bsr getstring
 		lea (newlinemsg,%pc),%a0
 		bsr putstring
-		movea.l %a1,%a0
-		bsr asciitoint
-		lea (hexmsg,%pc),%a0
-		bsr putstring
-		movea.l %a1,%a0
-		bsr longtoascii
-		tst.b %d1
+		movea.l #inputbuffer,%a0
+		movea.l #cmdbuffer,%a1
+		movea.l #argbuffer,%a2
+		bsr parser
 		beq error
-		movea.l %a1,%a0
+		lea (cmdmsg,%pc),%a0
+		bsr putstring
+		movea.l #cmdbuffer,%a0
 		bsr putstring
 		lea (newlinemsg,%pc),%a0
 		bsr putstring
+
+argloop:	move.w (%a2)+,%d0
+		beq loop
 		lea (typemsg,%pc),%a0
 		bsr putstring
-		move.b %d1,%d0
-		movea.l %a1,%a0
-		bsr bytetoascii
-		movea.l %a1,%a0
+		movea.l #printbuffer,%a0
+		bsr wordtoascii
+		movea.l #printbuffer,%a0
 		bsr putstring
+		lea (spacesmsg,%pc),%a0
+		bsr putstring
+
+		lea (valuemsg,%pc),%a0
+		bsr putstring
+		move.l (%a2)+,%d0
+		movea.l #printbuffer,%a0
+		bsr longtoascii
+		movea.l #printbuffer,%a0
+		bsr putstring
+
 		lea (newlinemsg,%pc),%a0
 		bsr putstring
-		bra loop
+		bra argloop
+
 error:		lea (errormsg,%pc),%a0
 		bsr putstring
 		bra loop
 
 		.section .rodata
 
-enternumbermsg:	.asciz "\r\nEnter a number: "
-hexmsg:		.asciz "Hex: "
+entercmdmsg:	.asciz "Enter a comamnd string: "
+cmdmsg:		.asciz "Command: "
 typemsg:	.asciz "Type: "
+valuemsg:	.asciz "Value: "
 errormsg:	.asciz "Error!\r\n"
 newlinemsg:	.asciz "\r\n"
+spacesmsg:	.asciz "  "
 
 		.section .bss
 
-buffer:		.space 256
+inputbuffer:	.space 256
+cmdbuffer:	.space 256
+argbuffer:	.space 256
+printbuffer:	.space 256

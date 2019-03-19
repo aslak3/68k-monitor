@@ -69,7 +69,7 @@ two:		.byte 2				| 3
 
 | convert the string at a0 to a integer. d0 will hold the value, d1 will
 | hold the type (1=byte, 2=word, 3=long). on error, d1 will be 0.
-| a0 will be moved to the first non printable char.
+| a0 will be moved to the first non printable char. sets zero on error.
 
 asciitoint:	movem.l %a1/%d2,-(%sp)
 		move.l #0,%d0			| set result to zero
@@ -98,5 +98,6 @@ asciitoint:	movem.l %a1/%d2,-(%sp)
 4:		move.b #0,%d1			| mark 0 digits
 5:		movea.l #datatypetable,%a1	| get start of table
 		move.b (%d1.w,%a1),%d1		| translate to type
+		suba.l #1,%a0			| wind back to space char
 		movem.l (%sp)+,%d2/%a1
 		rts
