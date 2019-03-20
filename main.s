@@ -1,68 +1,96 @@
 		.align 2
 
 		.include "include/hardware.i"
+		.include "include/macros.i"
 
 		.section .text
 
 start:		bsr serialinit
 
-loop:		lea (newlinemsg,%pc),%a0
-		bsr putstring
+mainloop:	lea (newlinemsg,%pc),%a0
+		bsr putstr
 
 		lea (entercmdmsg,%pc),%a0	| grab the greeting in a0
-		bsr putstring			| send it
+		bsr putstr			| send it
 		movea.l #inputbuffer,%a0
-		bsr getstring
+		bsr getstr
 		lea (newlinemsg,%pc),%a0
-		bsr putstring
+		bsr putstr
+
 		movea.l #inputbuffer,%a0
 		movea.l #cmdbuffer,%a1
 		movea.l #argbuffer,%a2
 		bsr parser
 		beq error
-		lea (cmdmsg,%pc),%a0
-		bsr putstring
-		movea.l #cmdbuffer,%a0
-		bsr putstring
-		lea (newlinemsg,%pc),%a0
-		bsr putstring
+		movea.l #commandarray,%a0	| setup command array in a0
+		bsr strmatcharray		| match against cmd in a1
+		beq nocommand			| no command
+		move.l %d0,%a0			| jsr needs addr in addrreg
+		jsr (%a0)			| run the sub found
+		bra mainloop
 
-argloop:	move.w (%a2)+,%d0
-		beq loop
+error:		lea (errormsg,%pc),%a0
+		bsr putstr
+		bra mainloop
+
+nocommand:	lea (nocommandmsg,%pc),%a0
+		bsr putstr
+		bra mainloop
+
+parsertest:	move.w (%a2)+,%d0
+		beq endargs
 		lea (typemsg,%pc),%a0
-		bsr putstring
+		bsr putstr
 		movea.l #printbuffer,%a0
 		bsr wordtoascii
 		movea.l #printbuffer,%a0
-		bsr putstring
+		bsr putstr
 		lea (spacesmsg,%pc),%a0
-		bsr putstring
+		bsr putstr
 
 		lea (valuemsg,%pc),%a0
-		bsr putstring
+		bsr putstr
 		move.l (%a2)+,%d0
 		movea.l #printbuffer,%a0
 		bsr longtoascii
 		movea.l #printbuffer,%a0
-		bsr putstring
+		bsr putstr
 
 		lea (newlinemsg,%pc),%a0
-		bsr putstring
-		bra argloop
+		bsr putstr
 
-error:		lea (errormsg,%pc),%a0
-		bsr putstring
-		bra loop
+		bra parsertest
+
+endargs:	rts
+
+help:		lea (helpmsg,%pc),%a0
+		bsr putstr
+		rts
 
 		.section .rodata
 
-entercmdmsg:	.asciz "Enter a comamnd string: "
-cmdmsg:		.asciz "Command: "
+entercmdmsg:	.asciz "> "
+
 typemsg:	.asciz "Type: "
 valuemsg:	.asciz "Value: "
+
 errormsg:	.asciz "Error!\r\n"
+nocommandmsg:	.asciz "No such command\r\n"
+
+helpmsg:	.ascii "Other:\r\n"
+		.ascii "    parsertest [BB] [WWWW] [LLLLLLLL] : test the parser.\r\n"
+		.ascii "    help : this help.\r\n"
+		.asciz ""
+
+
 newlinemsg:	.asciz "\r\n"
 spacesmsg:	.asciz "  "
+
+		.align 2			| longs need aligning
+
+commandarray:	insertcommand "parsertest"
+		insertcommand "help"
+		endcommand		
 
 		.section .bss
 

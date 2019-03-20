@@ -5,8 +5,8 @@
 		.section .text
 
 		.global serialinit
-		.global putstring
-		.global getstring
+		.global putstr
+		.global getstr
 
 serialinit:	move.b #0b00010011,MR1B2681	| 8n
 		move.b #0b00000111,MR2B2681	| one full stop bit
@@ -14,7 +14,7 @@ serialinit:	move.b #0b00010011,MR1B2681	| 8n
 		move.b #0b00000101,CRB2681	| enable rx and tx
 		rts
 
-putstring:	move.w %d0,-(%sp)
+putstr:	move.w %d0,-(%sp)
 1:		move.b (%a0)+,%d0		| get the byte to put
 		beq 2f				| end of message, done
 		bsr putchar			| output the char in d0
@@ -29,16 +29,16 @@ putchar:	btst.b #2,SRB2681		| busy sending last char?
 		move.b %d0,THRB2681		| put that byte
 		rts
 
-| get a string in a0
+| get a str in a0
 
-getstring:	move.w %d0,-(%sp)
+getstr:		move.w %d0,-(%sp)
 1:		bsr getchar			| get a char
 		bsr putchar			| echo it
 		cmpi.b #0x0a,%d0		| lf?
 		beq 2f				| match, done
 		cmpi.b #0x0d,%d0		| cr?
 		beq 2f				| match, done
-		move.b %d0,(%a0)+		| save it to the string
+		move.b %d0,(%a0)+		| save it to the str
 		bra 1b				| next char
 2:		move.b #0,(%a0)			| add a null
 		move.w (%sp)+,%d0

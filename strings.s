@@ -6,6 +6,8 @@
 		.global wordtoascii
 		.global longtoascii
 		.global asciitoint
+		.global strcmp
+		.global strmatcharray
 
 | convert the byte in d0 to hex, writing it into a0 and advancing it 2
 | bytes. d0.w is retained
@@ -101,3 +103,39 @@ asciitoint:	movem.l %a1/%d2,-(%sp)
 		suba.l #1,%a0			| wind back to space char
 		movem.l (%sp)+,%d2/%a1
 		rts
+
+| compare the string at a0 with the string at a1, setting d0 to 0 if they are
+| the same. zero will also be set. otherwise d1 will be 1. a0 and a1 are
+| preserved, for repeated calling.
+
+strcmp:		movem %a0-%a1,-(%sp)
+1:		move.b (%a0)+,%d0		| read in a1 char
+		beq 5f				| null, still need check a1
+		cmp.b (%a1)+,%d0		| compare
+		beq 1b				| match, keep checking
+2:		move.w #1,%d0			| not match
+		bra 4f				| out we go
+3:		clr.w %d0			| match
+4:		movem (%sp)+,%a0-%a1
+		rts
+5:		tst.b (%a1)			| check null on right
+		bne 2b				| not the same
+		bra 3b				| out we go with match
+
+| match the string in a1 to the list of strings at a0.this list is of the
+| form str1,user1,str2,usr2,null. usern goes in d0 on exit, or null for
+| no matches
+
+strmatcharray:	movem.l %a2,-(%sp)
+		movea.l %a0,%a2			| a2 is used for the list
+1:		move.l (%a2)+,%d0		| get the test string
+		beq 2f				| end of list?
+		move.l %d0,%a0			| move to a0 for compare
+		bsr strcmp			| check against cmd
+		beq 2f				| match!
+		move.l (%a2)+,%d0		| hop over the userdata
+		bra 1b				| check more
+2:		move.l (%a2)+,%d0		| get the user data/null
+		movem.l (%sp)+,%a2
+		rts
+		
