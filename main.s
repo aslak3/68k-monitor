@@ -19,7 +19,8 @@ mainloop:	lea (newlinemsg,%pc),%a0
 
 		movea.l #inputbuffer,%a0
 		movea.l #cmdbuffer,%a1
-		movea.l #argbuffer,%a2
+		movea.l #typebuffer,%a2
+		movea.l #valuebuffer,%a3
 		bsr parser
 		beq error
 		movea.l #commandarray,%a0	| setup command array in a0
@@ -50,7 +51,7 @@ parsertest:	move.w (%a2)+,%d0
 
 		lea (valuemsg,%pc),%a0
 		bsr putstr
-		move.l (%a2)+,%d0
+		move.l (%a3)+,%d0
 		movea.l #printbuffer,%a0
 		bsr longtoascii
 		movea.l #printbuffer,%a0
@@ -96,5 +97,6 @@ commandarray:	insertcommand "parsertest"
 
 inputbuffer:	.space 256
 cmdbuffer:	.space 256
-argbuffer:	.space 256
+typebuffer:	.space 256
+valuebuffer:	.space 256
 printbuffer:	.space 256
