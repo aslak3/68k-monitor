@@ -5,6 +5,7 @@
 		.section .text
 
 		.global parser
+		.global checktypes
 
 | parse the command string in a0, filling out a1 with the command name and
 | chain of types will be in a2, with chains of values in a3.
@@ -45,3 +46,28 @@ _parserout:	move.w #0,(%a2)+		| mark end of the params
 		rts
 _valueerror:	move.w #0,%d0			| mark errored
 		bra 4b
+
+| check a parameter type list against a commands requirements.
+|
+| a0 should have the types that should be checked (the command inputs), and
+| a1 should have the commands maximum data size list.
+|
+| if a checked type is of greater size then the commands maximum, the
+| valdation will fail and d0 will be 1 on exit, otherwise it will be 0.
+| on exit a0 will be restored, allowing the caller to access the arg list.
+
+checktypes:	movem.l %a0,-(%sp)
+1:		move.w (%a0)+,%d0		| get the inputed type
+		beq 3f				| check other end is null
+		cmp.w (%a1)+,%d0		| compare with requirement
+		bgt 2f				| see if a1>a0
+		bra 1b				| back for more
+2:		moveq.l #1,%d0			| bad
+		bra 5f				| and out
+3:		tst.w (%a1)			| at the com max list end?
+		bne 2b				| no, this is bad
+4:		clr.l %d0			| good
+5:		movem.l (%sp)+,%a0
+		rts
+
+		

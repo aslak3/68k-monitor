@@ -1,36 +1,47 @@
 		.align 2
 
 		.include "include/hardware.i"
-		.include "include/macros.i"
 
 		.section .text
 
-start:		bsr serialinit
+start:		bsr serialinit			| prepare the console port
 
-mainloop:	lea (newlinemsg,%pc),%a0
-		bsr putstr
+mainloop:	lea (newlinemsg,%pc),%a0	| blank between commands
+		bsr putstr			| ...
 
 		lea (entercmdmsg,%pc),%a0	| grab the greeting in a0
 		bsr putstr			| send it
-		movea.l #inputbuffer,%a0
-		bsr getstr
-		lea (newlinemsg,%pc),%a0
-		bsr putstr
+		movea.l #inputbuffer,%a0	| set the input up
+		bsr getstr			| read a line
+		lea (newlinemsg,%pc),%a0	| clean up
+		bsr putstr			| by outtpting a newline
 
-		movea.l #inputbuffer,%a0
-		movea.l #cmdbuffer,%a1
-		movea.l #typebuffer,%a2
-		movea.l #valuebuffer,%a3
-		bsr parser
-		beq error
+		movea.l #inputbuffer,%a0	| a0=input buffer
+		movea.l #cmdbuffer,%a1		| a1=command buffer
+		movea.l #typebuffer,%a2		| a2=type buffer
+		movea.l #valuebuffer,%a3	| a3=value buffer
+		bsr parser			| parse out the line
+		beq parsererror			| check for error
 		movea.l #commandarray,%a0	| setup command array in a0
 		bsr strmatcharray		| match against cmd in a1
 		beq nocommand			| no command
-		move.l %d0,%a0			| jsr needs addr in addrreg
-		jsr (%a0)			| run the sub found
+		move.l %d0,%a4			| move com data ptr to a4
+		movea.l #typebuffer,%a0		| retrivie the input types
+		move.l 4(%a4),%d0		| get the required types
+		beq 1f				| dont check if its null
+		move.l %d0,%a1			| move req types into a1
+		jsr checktypes			| check the types
+		bne badparams			| bad params check failed
+1:		movea.l (%a4),%a2		| address is first entry
+		movea.l %a3,%a1			| values in a1
+		jsr (%a2)			| run the comamnd sub
 		bra mainloop
 
-error:		lea (errormsg,%pc),%a0
+parsererror:	lea (parsererrormsg,%pc),%a0
+		bsr putstr
+		bra mainloop
+
+badparams:	lea (badparamsmsg,%pc),%a0
 		bsr putstr
 		bra mainloop
 
@@ -38,60 +49,15 @@ nocommand:	lea (nocommandmsg,%pc),%a0
 		bsr putstr
 		bra mainloop
 
-parsertest:	move.w (%a2)+,%d0
-		beq endargs
-		lea (typemsg,%pc),%a0
-		bsr putstr
-		movea.l #printbuffer,%a0
-		bsr wordtoascii
-		movea.l #printbuffer,%a0
-		bsr putstr
-		lea (spacesmsg,%pc),%a0
-		bsr putstr
-
-		lea (valuemsg,%pc),%a0
-		bsr putstr
-		move.l (%a3)+,%d0
-		movea.l #printbuffer,%a0
-		bsr longtoascii
-		movea.l #printbuffer,%a0
-		bsr putstr
-
-		lea (newlinemsg,%pc),%a0
-		bsr putstr
-
-		bra parsertest
-
-endargs:	rts
-
-help:		lea (helpmsg,%pc),%a0
-		bsr putstr
-		rts
-
 		.section .rodata
 
 entercmdmsg:	.asciz "> "
 
-typemsg:	.asciz "Type: "
-valuemsg:	.asciz "Value: "
-
-errormsg:	.asciz "Error!\r\n"
+parsererrormsg:	.asciz "Parser rror!\r\n"
 nocommandmsg:	.asciz "No such command\r\n"
-
-helpmsg:	.ascii "Other:\r\n"
-		.ascii "    parsertest [BB] [WWWW] [LLLLLLLL] : test the parser.\r\n"
-		.ascii "    help : this help.\r\n"
-		.asciz ""
-
-
-newlinemsg:	.asciz "\r\n"
-spacesmsg:	.asciz "  "
+badparamsmsg:	.asciz "Bad paramters to command\r\n"
 
 		.align 2			| longs need aligning
-
-commandarray:	insertcommand "parsertest"
-		insertcommand "help"
-		endcommand		
 
 		.section .bss
 
@@ -99,4 +65,3 @@ inputbuffer:	.space 256
 cmdbuffer:	.space 256
 typebuffer:	.space 256
 valuebuffer:	.space 256
-printbuffer:	.space 256

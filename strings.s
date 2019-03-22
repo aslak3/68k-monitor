@@ -8,6 +8,7 @@
 		.global asciitoint
 		.global strcmp
 		.global strmatcharray
+		.global strconcat
 
 | convert the byte in d0 to hex, writing it into a0 and advancing it 2
 | bytes. d0.w is retained
@@ -138,4 +139,12 @@ strmatcharray:	movem.l %a2,-(%sp)
 2:		move.l (%a2)+,%d0		| get the user data/null
 		movem.l (%sp)+,%a2
 		rts
-		
+
+| concatenat the string in a1 on the end of the string in a0. on exit,
+| a0 will be pointing at the closing null.
+
+strconcat:	move.b (%a1)+,(%a0)+		| add one byte to a0
+		beq 1f				| null? out
+		bra strconcat			| concat some more
+1:		suba.l #1,%a0			| back onto the null
+		rts
