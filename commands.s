@@ -11,10 +11,13 @@
 | of a subroutine reference (the handler) and a reference to a
 | zero-terminated list of maximum data types.
 
-commandarray:	checkcommand "readbyte", 3, 0
-		checkcommand "readword", 3, 0
-		checkcommand "readlong", 3, 0
-		checkcommand "dump", 3, 3, 0
+commandarray:	checkcommand "readbyte", 3
+		checkcommand "readword", 3
+		checkcommand "readlong", 3
+		checkcommand "dump", 3, 3
+		checkcommand "writebytes", 3, 1 + VARARG
+		checkcommand "writewords", 3, 2 + VARARG
+		checkcommand "writelongs", 3, 3 + VARARG
 		nocheckcommand "parsertest"
 		nocheckcommand "help"
 		endcommand		
@@ -117,6 +120,38 @@ dump:		movea.l (0*4,%a1),%a2		| get the start addr (a2)
 
 		rts
 
+| writebytes, writewords and writelongs: write a list of values to memory
+
+writeprelim:	movea.l %a1,%a2			| where to find what writing
+		adda.l #4,%a2			| onto second arg
+		movea.l (0,%a1),%a1		| where we are writing to
+		adda.l #2,%a0			| move to second type
+		rts
+
+writebytes:	bsr writeprelim			| setup
+1:		tst.w (%a0)+			| see if we are at end
+		beq 2f				| yes? out
+		move.b (3,%a2),(%a1)+		| write the byte
+		adda.l #4,%a2			| move to next value
+		bra 1b
+2:		rts
+
+writewords:	bsr writeprelim			| setup
+1:		tst.w (%a0)+			| see if we are at end
+		beq 2f				| yes? out
+		move.w (2,%a2),(%a1)+		| write the byte
+		adda.l #4,%a2			| move to next value
+		bra 1b
+2:		rts
+
+writelongs:	bsr writeprelim			| setup
+1:		tst.w (%a0)+			| see if we are at end
+		beq 2f				| yes? out
+		move.l (0,%a2),(%a1)+		| write the byte
+		adda.l #4,%a2			| move to next value
+		bra 1b
+2:		rts
+
 | test the parser: output the bytes, words and longs.
 
 		.section .text
@@ -166,13 +201,15 @@ help:		lea (helpmsg,%pc),%a0		| get the help message
 		.align 2
 
 helpmsg:	.ascii "Memory/IO:\r\n"
-		.ascii "    readbyte MMMMMMMM : read byte at MMMMMMMM\r\n"
-		.ascii "    readword MMMMMMMM : read word at MMMMMMMM\r\n"
-		.ascii "    readlong MMMMMMMM : read long at MMMMMMMM\r\n"
-		.ascii "    dump MMMMMMMM LLLLLLLL : dump from M, L bytes in ascii and hex\r\n"
-		.ascii "\r\n"
+		.ascii "    readbyte addr.l : read byte at addr\r\n"
+		.ascii "    readword addr.l : read word at addr\r\n"
+		.ascii "    readlong addr.l : read long at addr\r\n"
+		.ascii "    dump addr.l length.l : dump from addr, length bytes in ascii and hex\r\n"
+		.ascii "    writebytes addr.l [value.b ...] : write bytes at addr\r\n"
+		.ascii "    writewords addr.l [value.w ...] : write words at addr\r\n"
+		.ascii "    writelongs addr.l [value.l ...] : write longs at addr\r\n"
 		.ascii "Other:\r\n"
-		.ascii "    parsertest [BB] [WWWW] [LLLLLLLL] ... : test the parser.\r\n"
+		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser.\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
 

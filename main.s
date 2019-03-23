@@ -6,6 +6,13 @@
 
 start:		bsr serialinit			| prepare the console port
 
+| temp! clear the first 64KB
+
+		movea.l #0,%a0			| start at 0
+		move.w #(0x10000/4)-1,%d0	| 64KB of long words
+1:		clr.l (%a0)+			| clear it
+		dbra %d0,1b			| back for more
+
 mainloop:	lea (newlinemsg,%pc),%a0	| blank between commands
 		bsr putstr			| ...
 
@@ -51,7 +58,7 @@ nocommand:	lea (nocommandmsg,%pc),%a0
 
 		.section .rodata
 
-entercmdmsg:	.asciz "> "
+entercmdmsg:	.asciz "Monitor: > "
 
 parsererrormsg:	.asciz "Parser rror!\r\n"
 nocommandmsg:	.asciz "No such command\r\n"

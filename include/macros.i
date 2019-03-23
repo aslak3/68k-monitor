@@ -1,3 +1,5 @@
+		.equ VARARG, 0x8000		| vararg argument
+
 | add a command with the given name and maxtypes
 
 .macro checkcommand name,maxtypes:vararg
@@ -7,6 +9,7 @@ name_\name:	.asciz "\name"
 		.section .rodata.com.maxtypes
 		.align 2
 maxtypes_\name:	.word \maxtypes
+		.word 0
 		.section .rodata.com
 		.align 2
 com_\name:	.long \name			| handler pointer
