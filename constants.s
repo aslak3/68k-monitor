@@ -4,5 +4,5 @@
 		.global spacesmsg
 		.global newlinemsg
 
-spacesmsg:	.asciz "   "
+spacesmsg:	.asciz "  "
 newlinemsg:	.asciz "\r\n"

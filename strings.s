@@ -9,6 +9,7 @@
 		.global strcmp
 		.global strmatcharray
 		.global strconcat
+		.global makecharprint
 
 | convert the byte in d0 to hex, writing it into a0 and advancing it 2
 | bytes. d0.w is retained
@@ -147,4 +148,15 @@ strconcat:	move.b (%a1)+,(%a0)+		| add one byte to a0
 		beq 1f				| null? out
 		bra strconcat			| concat some more
 1:		suba.l #1,%a0			| back onto the null
+		rts
+
+| flattens the byte in d0 to its printable character, ie <20 or >7e becomes
+| a dot.
+
+makecharprint:	cmp.b #0x20,%d0			| compare with space
+		blo 1f				| lower? must be unprintable
+		cmp.b #0x7e,%d0			| compare with the end char
+		bhi 1f				| higher? it must be unprintable
+		rts				| if not, leave it alone
+1:		move.b #'.',%d0			| otherwise flatten it to dot
 		rts
