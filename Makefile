@@ -4,7 +4,7 @@ OBJCOPY = m68k-linux-gnu-objcopy
 FLASHER = ./tools/flasher
 
 BIN = monitor.bin
-OBJS = constants.o main.o commands.o serial.o strings.o parser.o
+OBJS = main.o exceptions.o constants.o commands.o serial.o strings.o parser.o
 
 all: $(BIN)
 

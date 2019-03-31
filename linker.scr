@@ -6,7 +6,8 @@ MEMORY
 
 SECTIONS
 {
-	.bss 0x000000 : { *(.bss) } > RAM
+	.vectors 0x000000 : { *(.vectors) } > RAM
+	.bss 0x000400 : { *(.bss) } > RAM
 	.text 0xf00800 : { *(.text) } > ROM
 	.rodata : { *(.rodata) } > ROM
 }

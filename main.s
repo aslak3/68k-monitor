@@ -13,6 +13,8 @@ start:		bsr serialinit			| prepare the console port
 1:		clr.l (%a0)+			| clear it
 		dbra %d0,1b			| back for more
 
+		bsr exceptionsinit		| setup execption handlers
+
 mainloop:	lea (newlinemsg,%pc),%a0	| blank between commands
 		bsr putstr			| ...
 
