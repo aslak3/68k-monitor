@@ -4,7 +4,7 @@
 
 		.section .text
 
-start:		bsr serialinit			| prepare the console port
+start:
 
 | temp! clear the first 64KB
 
@@ -14,6 +14,8 @@ start:		bsr serialinit			| prepare the console port
 		dbra %d0,1b			| back for more
 
 		bsr exceptionsinit		| setup execption handlers
+		bsr serialinit			| prepare the console port
+|		bsr timerinit			| prepare the timer
 
 mainloop:	lea (newlinemsg,%pc),%a0	| blank between commands
 		bsr putstr			| ...
