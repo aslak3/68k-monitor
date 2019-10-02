@@ -20,6 +20,9 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "writelongs", 3, 3 + VARARG
 		nocheckcommand "parsertest"
 		nocheckcommand "help"
+		nocheckcommand "message"
+		nocheckcommand "clear"
+		nocheckcommand "demo"
 		endcommand		
 
 | all commands: on entry a0 will be the type (word) array, and a1 will be the
@@ -212,6 +215,59 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser.\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
+
+		.section .text
+		.align 2
+
+		.equ EB,0x300000
+
+message:	move.w #0,%d0
+1:		movea.l #greets,%a0
+2:		move.b (%a0)+,%d1
+		beq 3f
+		move.b %d1,0x300001
+		bra 2b
+3:		dbra %d0,1b
+		rts
+
+demo:		move.w #0,%d0
+0:		move.w #0x8000,%d1
+4:		dbra %d1,4b
+		bsr movecursor
+		move.b #ASC_SP,0x300001
+1:		movea.l #greets,%a0
+2:		move.b (%a0)+,%d1
+		beq 3f
+		move.b %d1,0x300001
+		bra 2b
+3:		addq.w #1,%d0
+		cmp.w #80*60,%d0
+		bne 0b
+		bra demo
+		rts
+
+movecursor:	move.w %d0,-(%sp)
+		move.b %d0,0x300007
+		lsr.w #8,%d0
+		move.b %d0,0x300005
+		move.w (%sp)+,%d0
+		rts
+
+		.section .text
+		.align 2
+
+clear:		move.b #0,0x300003
+		move.w #60-1,%d0
+2:		move.w #128-1,%d1
+		move.b #0,%d2
+1:		addq.b #1,%d2
+		move.b #32,0x300001
+		dbra %d1,1b
+		dbra %d0,2b
+		move.b #0,0x300003
+		rts
+
+greets:		.asciz "Hello from the 68HC000! Is anyone there?  "
 
 		.section .bss
 		.align 2
