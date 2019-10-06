@@ -2,6 +2,7 @@
 		.include "include/ascii.i"
 
 		.global commandarray
+		.global printbuffer
 
 		.section .rodata
 		.align 2
@@ -23,6 +24,9 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "message"
 		nocheckcommand "clear"
 		nocheckcommand "demo"
+		checkcommand "diskidentify", 3
+		checkcommand "diskread", 3, 2, 1
+		checkcommand "diskwrite", 3, 2, 1
 		endcommand		
 
 | all commands: on entry a0 will be the type (word) array, and a1 will be the
@@ -268,6 +272,25 @@ clear:		move.b #0,0x300003
 		rts
 
 greets:		.asciz "Hello from the 68HC000! Is anyone there?  "
+
+		.section .text
+		.align 2
+
+diskidentify:	movea.l (0*4,%a1),%a0		| get address to write in
+		bsr ideidentify			| do the identify command
+		rts
+
+diskread:	movea.l (0*4,%a1),%a0		| get address to write in
+		move.l (1*4,%a1),%d1		| get the start sector
+		move.l (2*3,%a1),%d0		| and the count
+		bsr ideread			| do the read command
+		rts
+
+diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
+		move.l (1*4,%a1),%d1		| get the start sector
+		move.l (2*3,%a1),%d0		| and the count
+		bsr idewrite			| do the write command
+		rts
 
 		.section .bss
 		.align 2

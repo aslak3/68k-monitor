@@ -6,13 +6,15 @@
 
 start:
 
-| temp! clear the first 64KB
+| clear the first 1MB
 
 		movea.l #0,%a0			| start at 0
-		move.w #(0x10000/4)-1,%d0	| 64KB of long words
-1:		clr.l (%a0)+			| clear it
-		dbra %d0,1b			| back for more
-
+		move.w #(((1024*1024)/4)/65536)-1,%d1
+						| number of 64KB long blocks
+1:		move.w #65536-1,%d0		| 64KB of long words
+2:		clr.l (%a0)+			| clear it
+		dbra %d0,2b			| back for more
+		dbra %d1,1b			| next 64KB block
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
 |		bsr timerinit			| prepare the timer
