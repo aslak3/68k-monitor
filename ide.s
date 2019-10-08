@@ -9,19 +9,23 @@
 
 | ideread - read to memory a0 from sectors in d1, count in d0 sectors
 
-ideread:	bsr seeknewpos		| seek to the current position
+ideread:	move.b %d0,%d2		| save sector count
+		bsr seeknewpos		| seek to the current position
 		move.b #IDECOMREADSEC,%d0
 					| this is read sector
 		bsr simpleidecomm	| send the command
+		move.b %d2,%d0		| restore sector count
 		bsr idellread		| read into a0
 		rts
 
 | idewrite - write from memory a0 to sectors in d1, count in d0 sectors
 
-idewrite:	bsr seeknewpos		| seek to the current position
+idewrite:	move.b %d0,%d2		| save sector count
+		bsr seeknewpos		| seek to the current position
 		move.b #IDECOMWRITESEC,%d0
 					| this is write sector
 		bsr simpleidecomm	| send the command
+		move.b %d2,%d0		| restore sector count
 		bsr idellwrite		| write into a0
 		rts
 
@@ -30,6 +34,7 @@ idewrite:	bsr seeknewpos		| seek to the current position
 ideidentify:	move.b #IDECOMIDENTIFY,%d0
 					| the identify command
 		bsr simpleidecomm	| send it
+		move.b #1,%d0		| only one sector for identify
 		bsr idellread		| 512 reads into a0
 		bsr swapsector		| byte swap
 		rts

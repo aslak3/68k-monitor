@@ -282,13 +282,13 @@ diskidentify:	movea.l (0*4,%a1),%a0		| get address to write in
 
 diskread:	movea.l (0*4,%a1),%a0		| get address to write in
 		move.l (1*4,%a1),%d1		| get the start sector
-		move.l (2*3,%a1),%d0		| and the count
+		move.l (2*4,%a1),%d0		| and the count
 		bsr ideread			| do the read command
 		rts
 
 diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
 		move.l (1*4,%a1),%d1		| get the start sector
-		move.l (2*3,%a1),%d0		| and the count
+		move.l (2*4,%a1),%d0		| and the count
 		bsr idewrite			| do the write command
 		rts
 
