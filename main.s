@@ -17,7 +17,7 @@ start:
 		dbra %d1,1b			| next 64KB block
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
-|		bsr timerinit			| prepare the timer
+		bsr timerinit			| prepare the timer
 
 mainloop:	lea (newlinemsg,%pc),%a0	| blank between commands
 		bsr putstr			| ...

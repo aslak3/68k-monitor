@@ -5,7 +5,7 @@ FLASHER = ./tools/flasher
 
 BIN = monitor.bin
 OBJS = main.o exceptions.o constants.o commands.o serial.o timer.o strings.o \
-	parser.o ide.o
+	parser.o ide.o misc.o vgm.o
 
 all: $(BIN)
 

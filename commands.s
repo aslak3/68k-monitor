@@ -1,5 +1,6 @@
 		.include "include/macros.i"
 		.include "include/ascii.i"
+		.include "include/hardware.i"
 
 		.global commandarray
 		.global printbuffer
@@ -12,7 +13,8 @@
 | of a subroutine reference (the handler) and a reference to a
 | zero-terminated list of maximum data types.
 
-commandarray:	checkcommand "readbyte", 3
+commandarray:	nocheckcommand "reset"
+		checkcommand "readbyte", 3
 		checkcommand "readword", 3
 		checkcommand "readlong", 3
 		checkcommand "dump", 3, 3
@@ -27,15 +29,23 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "diskidentify", 3
 		checkcommand "diskread", 3, 2, 1
 		checkcommand "diskwrite", 3, 2, 1
+		checkcommand "opl2regwrite", 1, 1
+		checkcommand "opl2note", 1
+		checkcommand "playvgm", 3
+		nocheckcommand "showticks"
 		endcommand		
+
+		.section .text
+		.align 2
 
 | all commands: on entry a0 will be the type (word) array, and a1 will be the
 | value (long) array.
 
+reset:		reset
+		rts
+
 | read the byte, word or long at the first argument and display it.
 
-		.section .text
-		.align 2
 
 readbyte:	movea.l (0,%a1),%a0		| get the first argument
 		move.b (%a0),%d0		| get the byte at that addr
@@ -50,7 +60,7 @@ readword:	movea.l (0,%a1),%a0		| get the first argument
 		bra readcommon			| add newline and print
 
 readlong:	movea.l (0,%a1),%a0		| get the first argument
-		move.l (%a0),%d0		| get the byte at that addr
+		move.l (%a0),%d0		| get the long at that addr
 		movea.l #printbuffer,%a0	| set the output buffer
 		bsr longtoascii			| convert into a0
 		bra readcommon			| add newline and print
@@ -223,8 +233,6 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.section .text
 		.align 2
 
-		.equ EB,0x300000
-
 message:	move.w #0,%d0
 1:		movea.l #greets,%a0
 2:		move.b (%a0)+,%d1
@@ -235,11 +243,13 @@ message:	move.w #0,%d0
 		rts
 
 demo:		move.w #0,%d0
-0:		move.w #0x8000,%d1
+0:		move.w #0x0040,%d2
+5:		move.w #0x0fff,%d1
 4:		dbra %d1,4b
+		dbra %d2,5b
 		bsr movecursor
 		move.b #ASC_SP,0x300001
-1:		movea.l #greets,%a0
+1:		movea.l #demomsg,%a0
 2:		move.b (%a0)+,%d1
 		beq 3f
 		move.b %d1,0x300001
@@ -257,21 +267,18 @@ movecursor:	move.w %d0,-(%sp)
 		move.w (%sp)+,%d0
 		rts
 
-		.section .text
-		.align 2
-
 clear:		move.b #0,0x300003
-		move.w #60-1,%d0
-2:		move.w #128-1,%d1
-		move.b #0,%d2
-1:		addq.b #1,%d2
-		move.b #32,0x300001
-		dbra %d1,1b
-		dbra %d0,2b
+		move.w #(80*60)-1,%d0
+1:		move.b #0x20,0x300001
+		dbra %d0,1b
 		move.b #0,0x300003
 		rts
 
+		.section .rodata
+		.align 2
+
 greets:		.asciz "Hello from the 68HC000! Is anyone there?  "
+demomsg:	.asciz "The Motorola 68000 ('sixty-eight-thousand'; also called the m68k or Motorola 68k, sixty-eight-kay) is a 16/32-bit CISC microprocessor, introduced in 1979 by Motorola Semiconductor Products Sector. The design implements a 32-bit instruction set, with 32-bit registers and a 32-bit internal data bus. The address bus is 24-bits and does not use memory segmentation, which made it popular with programmers. Internally, it uses a 16-bit data ALU and two additional 16-bit ALUs used mostly for addresses,[2] and has a 16-bit external data bus.[3] For this reason, Motorola referred to it as a 16/32-bit processor. As one of the first widely available processors with a 32-bit instruction set, and running at relatively high speeds for the era, the 68k was a popular design through the 1980s. It was widely used in a new generation of personal computers with graphical user interfaces, including the Apple Macintosh, Commodore Amiga, Atari ST and many others. It competed primarily against the Intel 8088, found in the IBM PC, which it easily outperformed. The 68k and 8088 pushed other designs, like the Zilog Z8000 and National Semiconductor 32016, into niche markets, and made Motorola a major player in the CPU space. The 68k was soon expanded with additional family members, implementing full 32-bit ALUs as part of the growing Motorola 68000 series. The original 68k is generally software forward-compatible with the rest of the line despite being limited to a 16-bit wide external bus.[2] After 40 years in production, the 68000 architecture is still in use."
 
 		.section .text
 		.align 2
@@ -292,9 +299,164 @@ diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
 		bsr idewrite			| do the write command
 		rts
 
+opl2regwrite:	move.b ((0*4)+3,%a1),%d1
+		move.b ((1*4)+3,%a1),%d0
+		bra opl2
+
+.macro opl2macro address value
+		move.b \address,%d1
+		move.b \value,%d0
+		bsr opl2
+.endm
+
+opl2note:	opl2macro #0x20,#0x21
+		opl2macro #0x40,#0x10
+		opl2macro #0x60,#0xf0
+		opl2macro #0x80,#0x77
+		opl2macro #0xa0,"((0*4)+3,%a1)"
+		opl2macro #0x23,#0x01
+		opl2macro #0x43,#0x00
+		opl2macro #0x63,#0xf0
+		opl2macro #0x93,#0x77
+		opl2macro #0xb0,#0x31
+		rts
+
+opl2:		move.b %d1,OPL2REGADDR
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		move.b %d0,OPL2DATA
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		rts
+
+playvgm:	movea.l (0*4,%a1),%a6
+		bsr vgmplayer
+		rts
+
+showticks:	move.l timerticks,%d0
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr longtoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr putstr			| and print it
+		rts
+
+		.section .rodata
+		.align 2
+
+testmsg:	.asciz "Hello from the 68681\r\n"
+
 		.section .bss
 		.align 2
 
 | shared buffer used for printing.
 
 printbuffer:	.space 256
+
