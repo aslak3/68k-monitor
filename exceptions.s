@@ -45,7 +45,13 @@ zerodivide:	lea (zerodividemsg,%pc),%a0
 		bsr strconcat
 		movea.l #buffer,%a0
 		bsr putstr
-9:		bra 9b
+9:		move.w #0xffff,%d0
+		move.b #0,LED
+10:		dbra %d0,10b
+		move.w #0xffff,%d0
+		move.b #0xff,LED
+11:		dbra %d0,11b
+		bra 9b
 
 		.section .rodata
 		.align 2

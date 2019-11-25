@@ -8,6 +8,7 @@
 		.equ YM3812_CLOCK_O,	0x50
 
 		.global vgmplayer
+		.global vgmstop
 		.global opl2noteplay
 
 		.section .text
@@ -52,7 +53,10 @@ labelprintlong:	movea.l #printbuffer,%a0
 		lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat
 		movea.l #printbuffer,%a0
-		bsr putstr
+		bsr vgaputstr
+		rts
+
+vgmstop:	clr running
 		rts
 
 		.section .rodata

@@ -1,8 +1,7 @@
-		.align 2
-
 		.include "include/hardware.i"
 
 		.section .text
+		.align 2
 
 start:
 
@@ -18,16 +17,15 @@ start:
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
 		bsr timerinit			| prepare the timer
+		bsr vgainit
 
-mainloop:	lea (newlinemsg,%pc),%a0	| blank between commands
-		bsr putstr			| ...
+mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
+		bsr vgaputstr			| ...
 
-		lea (entercmdmsg,%pc),%a0	| grab the greeting in a0
-		bsr putstr			| send it
+		lea.l (entercmdmsg,%pc),%a0	| grab the greeting in a0
+		bsr vgaputstr			| send it
 		movea.l #inputbuffer,%a0	| set the input up
 		bsr getstr			| read a line
-		lea (newlinemsg,%pc),%a0	| clean up
-		bsr putstr			| by outtpting a newline
 
 		movea.l #inputbuffer,%a0	| a0=input buffer
 		movea.l #cmdbuffer,%a1		| a1=command buffer
@@ -51,18 +49,19 @@ mainloop:	lea (newlinemsg,%pc),%a0	| blank between commands
 		bra mainloop
 
 parsererror:	lea (parsererrormsg,%pc),%a0
-		bsr putstr
+		bsr vgaputstr
 		bra mainloop
 
 badparams:	lea (badparamsmsg,%pc),%a0
-		bsr putstr
+		bsr vgaputstr
 		bra mainloop
 
 nocommand:	lea (nocommandmsg,%pc),%a0
-		bsr putstr
+		bsr vgaputstr
 		bra mainloop
 
 		.section .rodata
+		.align 2
 
 entercmdmsg:	.asciz "Monitor: > "
 
@@ -70,9 +69,8 @@ parsererrormsg:	.asciz "Parser rror!\r\n"
 nocommandmsg:	.asciz "No such command\r\n"
 badparamsmsg:	.asciz "Bad paramters to command\r\n"
 
-		.align 2			| longs need aligning
-
 		.section .bss
+		.align 2			| longs need aligning
 
 inputbuffer:	.space 256
 cmdbuffer:	.space 256

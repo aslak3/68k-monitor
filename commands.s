@@ -4,6 +4,7 @@
 
 		.global commandarray
 		.global printbuffer
+		.global clear
 
 		.section .rodata
 		.align 2
@@ -23,16 +24,14 @@ commandarray:	nocheckcommand "reset"
 		checkcommand "writelongs", 3, 3 + VARARG
 		nocheckcommand "parsertest"
 		nocheckcommand "help"
-		nocheckcommand "message"
-		nocheckcommand "clear"
-		nocheckcommand "demo"
 		checkcommand "diskidentify", 3
 		checkcommand "diskread", 3, 2, 1
 		checkcommand "diskwrite", 3, 2, 1
-		checkcommand "opl2regwrite", 1, 1
-		checkcommand "opl2note", 1
 		checkcommand "playvgm", 3
+		nocheckcommand "stopvgm"
 		nocheckcommand "showticks"
+		nocheckcommand "clear"
+		nocheckcommand "testread"
 		endcommand		
 
 		.section .text
@@ -41,8 +40,7 @@ commandarray:	nocheckcommand "reset"
 | all commands: on entry a0 will be the type (word) array, and a1 will be the
 | value (long) array.
 
-reset:		reset
-		rts
+reset:		jmp 4
 
 | read the byte, word or long at the first argument and display it.
 
@@ -68,7 +66,7 @@ readlong:	movea.l (0,%a1),%a0		| get the first argument
 readcommon:	lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat			| add it
 		movea.l #printbuffer,%a0	| wind buffer back
-		bsr putstr			| and print it
+		bsr vgaputstr			| and print it
 		rts
 
 | dump out (in words) from the first argument the length, the second
@@ -129,7 +127,7 @@ dump:		movea.l (0*4,%a1),%a2		| get the start addr (a2)
 		bsr strconcat			| ... a new line
 
 		movea.l #printbuffer,%a0	| now we can ...
-		bsr putstr			| ... print this line!
+		bsr vgaputstr			| ... print this line!
 
 		adda.l #0x10,%a2		| move to next chunk
 		sub.l #0x10,%d1			| adjust the byte count
@@ -193,7 +191,7 @@ parsertest:	movea.l %a0,%a2			| arg type table into a2
 		bsr strconcat			| append it
 
 		movea.l #printbuffer,%a0	| wind a0 back to start
-		bsr putstr			| and print it
+		bsr vgaputstr			| and print it
 
 		bra 1b
 
@@ -211,7 +209,7 @@ valuemsg:       .asciz "Value: "
 		.align 2
 
 help:		lea (helpmsg,%pc),%a0		| get the help message
-		bsr putstr			| print it
+		bsr vgaputstr			| print it
 		rts
 
 		.section .rodata
@@ -225,60 +223,19 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    writebytes addr.l [value.b ...] : write bytes at addr\r\n"
 		.ascii "    writewords addr.l [value.w ...] : write words at addr\r\n"
 		.ascii "    writelongs addr.l [value.l ...] : write longs at addr\r\n"
+		.ascii "Disk:\r\n"
+		.ascii "    diskidentify addr.l : write disk identify data at addr\r\n"
+		.ascii "    diskread addr.l sector.w count.b : read  sector, count 512B sectors\r\n"
+		.ascii "    diskwrite addr.l sector.w count.b : write sector, count 512B sectors\r\n"
+		.ascii "Video Game Music:\r\n"
+		.ascii "    playvgm addr.l : play VGM file from memory at addr\r\n"
+		.ascii "    stopvgm : stop VGM playback\r\n"
 		.ascii "Other:\r\n"
+		.ascii "    showticks : show the tick count in 1/44100 seconds\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser.\r\n"
+		.ascii "    clear : clear the screen\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
-
-		.section .text
-		.align 2
-
-message:	move.w #0,%d0
-1:		movea.l #greets,%a0
-2:		move.b (%a0)+,%d1
-		beq 3f
-		move.b %d1,0x300001
-		bra 2b
-3:		dbra %d0,1b
-		rts
-
-demo:		move.w #0,%d0
-0:		move.w #0x0040,%d2
-5:		move.w #0x0fff,%d1
-4:		dbra %d1,4b
-		dbra %d2,5b
-		bsr movecursor
-		move.b #ASC_SP,0x300001
-1:		movea.l #demomsg,%a0
-2:		move.b (%a0)+,%d1
-		beq 3f
-		move.b %d1,0x300001
-		bra 2b
-3:		addq.w #1,%d0
-		cmp.w #80*60,%d0
-		bne 0b
-		bra demo
-		rts
-
-movecursor:	move.w %d0,-(%sp)
-		move.b %d0,0x300007
-		lsr.w #8,%d0
-		move.b %d0,0x300005
-		move.w (%sp)+,%d0
-		rts
-
-clear:		move.b #0,0x300003
-		move.w #(80*60)-1,%d0
-1:		move.b #0x20,0x300001
-		dbra %d0,1b
-		move.b #0,0x300003
-		rts
-
-		.section .rodata
-		.align 2
-
-greets:		.asciz "Hello from the 68HC000! Is anyone there?  "
-demomsg:	.asciz "The Motorola 68000 ('sixty-eight-thousand'; also called the m68k or Motorola 68k, sixty-eight-kay) is a 16/32-bit CISC microprocessor, introduced in 1979 by Motorola Semiconductor Products Sector. The design implements a 32-bit instruction set, with 32-bit registers and a 32-bit internal data bus. The address bus is 24-bits and does not use memory segmentation, which made it popular with programmers. Internally, it uses a 16-bit data ALU and two additional 16-bit ALUs used mostly for addresses,[2] and has a 16-bit external data bus.[3] For this reason, Motorola referred to it as a 16/32-bit processor. As one of the first widely available processors with a 32-bit instruction set, and running at relatively high speeds for the era, the 68k was a popular design through the 1980s. It was widely used in a new generation of personal computers with graphical user interfaces, including the Apple Macintosh, Commodore Amiga, Atari ST and many others. It competed primarily against the Intel 8088, found in the IBM PC, which it easily outperformed. The 68k and 8088 pushed other designs, like the Zilog Z8000 and National Semiconductor 32016, into niche markets, and made Motorola a major player in the CPU space. The 68k was soon expanded with additional family members, implementing full 32-bit ALUs as part of the growing Motorola 68000 series. The original 68k is generally software forward-compatible with the rest of the line despite being limited to a 16-bit wide external bus.[2] After 40 years in production, the 68000 architecture is still in use."
 
 		.section .text
 		.align 2
@@ -299,144 +256,11 @@ diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
 		bsr idewrite			| do the write command
 		rts
 
-opl2regwrite:	move.b ((0*4)+3,%a1),%d1
-		move.b ((1*4)+3,%a1),%d0
-		bra opl2
-
-.macro opl2macro address value
-		move.b \address,%d1
-		move.b \value,%d0
-		bsr opl2
-.endm
-
-opl2note:	opl2macro #0x20,#0x21
-		opl2macro #0x40,#0x10
-		opl2macro #0x60,#0xf0
-		opl2macro #0x80,#0x77
-		opl2macro #0xa0,"((0*4)+3,%a1)"
-		opl2macro #0x23,#0x01
-		opl2macro #0x43,#0x00
-		opl2macro #0x63,#0xf0
-		opl2macro #0x93,#0x77
-		opl2macro #0xb0,#0x31
-		rts
-
-opl2:		move.b %d1,OPL2REGADDR
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		move.b %d0,OPL2DATA
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		rts
-
 playvgm:	movea.l (0*4,%a1),%a6
 		bsr vgmplayer
+		rts
+
+stopvgm:	bsr vgmstop
 		rts
 
 showticks:	move.l timerticks,%d0
@@ -445,13 +269,21 @@ showticks:	move.l timerticks,%d0
 		lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat			| add it
 		movea.l #printbuffer,%a0	| wind buffer back
-		bsr putstr			| and print it
+		bsr vgaputstr			| and print it
 		rts
 
-		.section .rodata
-		.align 2
+clear:		move.b #ASC_FF,%d0
+		bsr vgaputchar
+		rts
 
-testmsg:	.asciz "Hello from the 68681\r\n"
+testread:	move.w #0x0000,%d0
+		movea.l #VGAREADADDRHI,%a0	| load pointer
+		movep.w %d0,(0,%a0)		| one hit
+		move.w #4096,%d0
+		movea.l #0x8000,%a0
+1:		move.b VGADATA,(%a0)+
+		dbra %d0,1b
+		rts		
 
 		.section .bss
 		.align 2
