@@ -1,5 +1,6 @@
-		.include "include/macros.i"
 		.include "include/hardware.i"
+
+| these are the header structure offsets
 
 		.equ MAGIC_O,		0
 		.equ EOF_O,		0x04

@@ -28,81 +28,52 @@ putstr:		move.w %d0,-(%sp)
 putchar:	btst.b #2,XR88C681SRB		| busy sending last char?
 		beq putchar			| yes, look again
 		move.b %d0,XR88C681THRB		| put that byte
-|		bsr vgaputchar
 		rts
 
 | get a str in a0
 
-|getstr:		move.w %d0,-(%sp)
-|		move.b #0,VGANOREAD
-|1:		bsr getchar			| get a char
-|		bsr vgaputchar			| echo it to vga
-|		bsr putchar			| and to the serial
-|		cmpi.b #ASC_LF,%d0		| lf?
-|		beq 2f				| match, done
-|		cmpi.b #ASC_CR,%d0		| cr?
-|		beq 2f				| match, done
-|		cmpi.b #ASC_BS,%d0		| backspace?
-|		beq 3f				| 
-|		move.b %d0,(%a0)+		| save it to the str
-|		bra 1b				| next char
-|2:		move.b #0,(%a0)			| add a null
-|		move.b #1,VGANOREAD
-|		move.w (%sp)+,%d0
-|		rts
-
-
 getstr:		movem.l %d0-%d1/%a0,-(%sp)	
-		clr.w %d1		| set the length to 0
-getstrloop:	bsr getchar		| get a char in a
-		cmp.b #ASC_CR,%d0	| cr?
-		beq getstrout		| if it is, then out
-		cmp.b #ASC_LF,%d0	| lf?
-		beq getstrout		| if it is, then out
-		cmp.b #ASC_BS,%d0	| backspace pressed?
-		beq getstrbs		| handle backspace
-		cmp.b #ASC_SP,%d0	| less then space ...
-		blo getstrloop		| ... ignore, and get another
-		btst.b #7,%d0		| top bit set?
-		bne getstrloop		| .... ignore (cursor etc)
-		move.b %d0,(%a0)+	| add it to string
-		addq.w #1,%d1		| increment the number of chars
-getstrecho:	bsr vgaputchar		| echo it
-		bra getstrloop		| get more
-getstrout:	move.b #0,(%a0)+	| add a null
-		movea.l #newlinemsg,%a0	| tidy up ...
-		bsr vgaputstr		| ... with a newline
+		clr.w %d1			| set the length to 0
+getstrloop:	bsr getchar			| get a char in a
+		cmp.b #ASC_CR,%d0		| cr?
+		beq getstrout			| if it is, then out
+		cmp.b #ASC_LF,%d0		| lf?
+		beq getstrout			| if it is, then out
+		cmp.b #ASC_BS,%d0		| backspace pressed?
+		beq getstrbs			| handle backspace
+		cmp.b #ASC_SP,%d0		| less then space ...
+		blo getstrloop			| ... ignore, and get another
+		btst.b #7,%d0			| top bit set?
+		bne getstrloop			| .... ignore (cursor etc)
+		move.b %d0,(%a0)+		| add it to string
+		addq.w #1,%d1			| increment the number of chars
+getstrecho:	bsr vgaputchar			| echo it
+		bra getstrloop			| get more
+getstrout:	move.b #0,(%a0)+		| add a null
+		movea.l #newlinemsg,%a0		| tidy up ...
+		bsr vgaputstr			| ... with a newline
 		movem.l (%sp)+,%d0-%d1/%a0
 		rts
-getstrbs:	tst.w %d1		| see if the char count is 0
-		beq getstrloop		| do nothing if already zero
-		subq.w #1,%d1		| reduce count by 1
-		move.b #0,(%a0)		| null the current char
-		suba.l #1,%a0		| move the pointer back 1
-		move.b #ASC_BS,%d0	|  move cursor back one
+getstrbs:	tst.w %d1			| see if the char count is 0
+		beq getstrloop			| do nothing if already zero
+		subq.w #1,%d1			| reduce count by 1
+		move.b #0,(%a0)			| null the current char
+		suba.l #1,%a0			| move the pointer back 1
+		move.b #ASC_BS,%d0		|  move cursor back one
 		bsr vgaputchar
-		move.b #ASC_SP,%d0	| then erase and move forward
+		move.b #ASC_SP,%d0		| then erase and move forward
 		bsr vgaputchar
-		move.b #ASC_BS,%d0	| then back one again
+		move.b #ASC_BS,%d0		| then back one again
 		bsr vgaputchar
-		bra getstrloop		| echo the bs and charry on
+		bra getstrloop			| echo the bs and charry on
 
 | get a char in d0
 
 getchar:	btst.b #0,XR88C681SRB		| chars?
 		beq getchar			| no chars yet
 		move.b XR88C681RHRB,%d0		| get it in d0
-		cmp.b #'[',%d0
-		beq 1f
-		cmp.b #']',%d0
-		beq 2f
 getcharo:	rts
 
-1:		bsr vgaup
-		bra getchar
-		
-2:		bsr vgadown
-		bra getchar
 
 | get a char with a two second (ish) timeout, exit zero for got a char
 | or non zero for timeout.

@@ -14,8 +14,7 @@
 | of a subroutine reference (the handler) and a reference to a
 | zero-terminated list of maximum data types.
 
-commandarray:	nocheckcommand "reset"
-		checkcommand "readbyte", 3
+commandarray:	checkcommand "readbyte", 3
 		checkcommand "readword", 3
 		checkcommand "readlong", 3
 		checkcommand "dump", 3, 3
@@ -31,7 +30,9 @@ commandarray:	nocheckcommand "reset"
 		nocheckcommand "stopvgm"
 		nocheckcommand "showticks"
 		nocheckcommand "clear"
-		nocheckcommand "testread"
+		checkcommand "testvread", 3, 2, 2
+		checkcommand "testvwrite", 3, 2, 2
+		checkcommand "checksum", 3, 2
 		endcommand		
 
 		.section .text
@@ -39,8 +40,6 @@ commandarray:	nocheckcommand "reset"
 
 | all commands: on entry a0 will be the type (word) array, and a1 will be the
 | value (long) array.
-
-reset:		jmp 4
 
 | read the byte, word or long at the first argument and display it.
 
@@ -232,7 +231,10 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    stopvgm : stop VGM playback\r\n"
 		.ascii "Other:\r\n"
 		.ascii "    showticks : show the tick count in 1/44100 seconds\r\n"
-		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser.\r\n"
+		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser\r\n"
+		.ascii "    testvread addr.l start.w count.w : test video read into addr\r\n"
+		.ascii "    testvwrite addr.l start.w count.w : test video write from addr\r\n"
+		.ascii "    checksum addr.l count.w : checksum memory, connt in longs\r\n"
 		.ascii "    clear : clear the screen\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
@@ -256,11 +258,11 @@ diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
 		bsr idewrite			| do the write command
 		rts
 
-playvgm:	movea.l (0*4,%a1),%a6
-		bsr vgmplayer
+playvgm:	movea.l (0*4,%a1),%a6		| get the start addr into a6
+		bsr vgmplayer			| start the playback
 		rts
 
-stopvgm:	bsr vgmstop
+stopvgm:	bsr vgmstop			| simple wrapper
 		rts
 
 showticks:	move.l timerticks,%d0
@@ -276,15 +278,43 @@ clear:		move.b #ASC_FF,%d0
 		bsr vgaputchar
 		rts
 
-testread:	move.w #0x0000,%d0
-		movea.l #VGAREADADDRHI,%a0	| load pointer
-		movep.w %d0,(0,%a0)		| one hit
-		move.w #4096,%d0
-		movea.l #0x8000,%a0
+testvread:	movea.l (0*4,%a1),%a0		| get address to write in
+		move.w (1*4+2,%a1),%d1		| get the start
+		move.w (2*4+2,%a1),%d0		| and the count
+		lsl.w #2,%d0			| count was in longs
+		subq.w #1,%d0			| used in dbra
+		movea.l #VGAREADADDRHI,%a1	| load pointer
+		movep.w %d1,(0,%a1)		| one hit
+		move.b VGADATA,%d1		| dumamy read
 1:		move.b VGADATA,(%a0)+
 		dbra %d0,1b
-		rts		
+		rts
 
+testvwrite:	movea.l (0*4,%a1),%a0		| get address to read from
+		move.w (1*4+2,%a1),%d1		| get the start
+		move.w (2*4+2,%a1),%d0		| and the count
+		lsl.w #2,%d0			| count was in longs
+		subq.w #1,%d0			| used in dbra
+		movea.l #VGAWRITEADDRHI,%a1	| load pointer
+		movep.w %d1,(0,%a1)		| one hit
+1:		move.b (%a0)+,VGADATA
+		dbra %d0,1b
+		rts
+
+checksum:	movea.l (0*4,%a1),%a0		| get address to read from
+		move.w (1*4+2,%a1),%d1		| get the length
+		subq.w #1,%d1			| used in dbra
+		clr.l %d0			| clear sum
+1:		add.l (%a0)+,%d0		| sum it
+		dbra %d1,1b			| back for more
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr longtoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr vgaputstr			| and print it
+		rts
+		
 		.section .bss
 		.align 2
 

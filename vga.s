@@ -4,8 +4,6 @@
 		.global vgainit
 		.global vgaputchar
 		.global vgaputstr
-		.global vgaup
-		.global vgadown
 
 		.section .text
 		.align 2
@@ -13,33 +11,74 @@
 vgainit:	bsr vgaclear			| just a clear
 		rts
 
-vgaclear:	move.w %d0,-(%sp)
-		move.w #80*60*6-1,%d0		| clear six screens worth
-		move.b #0,VGAWRITEADDRHI	| clr will read. :(
-		move.b #0,VGAWRITEADDRLO	| clr will read. :(
-1:		move.b #0,VGADATA		| ditto
+vgaclear:	movem.w %d0-%d1,-(%sp)
+		clr.b %d1			| doing lots of clearing
+		move.w #65535-1,%d0		| clear 64KB worth
+		move.b %d1,VGAWRITEADDRHI	| clr will read. :(
+		move.b %d1,VGAWRITEADDRLO	| clr will read. :(
+1:		move.b %d1,VGADATA		| ditto
 		dbra %d0,1b			| back for more
-		move.b #0,VGAWRITEADDRHI	| clr will read. :(
-		move.b #0,VGAWRITEADDRLO	| clr will read. :(
+		move.b %d1,VGAWRITEADDRHI	| clr will read. :(
+		move.b %d1,VGAWRITEADDRLO	| clr will read. :(
 		clr.w row			| top
 		clr.w column			| left
-		clr.w scrollrow			| no scroll offset
-		bsr vgaseekscroll		| move the cursor
-		move.w (%sp)+,%d0
+		move.b %d1,VGAOFFSETADDRHI	| clr will read. :(
+		move.b %d1,VGAOFFSETADDRLO	| clr will read. :(
+		move.b #0x0f,VGACONFIG		| white on black
+		movem.w (%sp)+,%d0-%d1
 		rts
 
-vgaseekscroll:	movem.l %d0/%a0,-(%sp)
+| scrolling approach is to hardware scroll one screen worth, then copy.
+| 1. row before row 60: do nothing
+| 2. row before row 120: move offset to 60-row
+| 3. otherwise:
+| 3a. read in bottom (newest) scren
+| 3b. copy it to the top screen
+| 3c. fill the old bottom screen with empty data
+| 3d. move the display (offset) to the top
+| 3e. with the curor on the bottom row
+| 3f. user not aware that aything interesting has happened
+
+vgaseekscroll:	movem.l %d0-%d1/%a0,-(%sp)
+
 		move.w row,%d0			| get the current row
-		add.w scrollrow,%d0		| add he scroll offset
 		subi.w #59,%d0			| offset into 2nd screen?
-		ble 1f				| no, then out
+		ble vgaseekscrollo		| no, then out
 		mulu.w #80,%d0			| 80 cols in a row
-2:		movea.l #VGAOFFSETADDRHI,%a0	| load pointer
+		movea.l #VGAOFFSETADDRHI,%a0	| load pointer for offset
 		movep.w %d0,(0,%a0)		| one hit!
-vgaseekscrollo:	movem.l (%sp)+,%d0/%a0
+		move.w row,%d0			| get offset again		
+		subi.w #60+59,%d0		| bottom of 2nd screen?
+		ble vgaseekscrollo		| no, then out
+
+		movea.l #VGAREADADDRHI,%a0	| load pointer for reading
+		move.w #80*60,%d0		| copying 2nd screen
+		movep.w %d0,(0,%a0)		| move there
+		move.b VGADATA,%d1		| dummy read!
+		movea.l #scrollbuffer,%a0	| copying to the buffer
+		move.w #80*60-1,%d1		| need that many bytes, too
+1:		move.b VGADATA,(%a0)+		| read one byte
+		dbra %d1,1b			| back for more copying
+
+		movea.l #VGAWRITEADDRHI,%a0	| load pointer for writing
+		clr.w %d0			| writing to 1st screen
+		movep.w %d0,(0,%a0)		| move there
+		movea.l #scrollbuffer,%a0	| copying to the buffer
+		move.w #80*60-1,%d1		| need that many bytes, too
+2:		move.b (%a0)+,VGADATA		| write one byte
+		dbra %d1,2b			| back for more copying
+		move.w #80*60-1,%d1		| need that many bytes, too
+		clr.b %d0			| need to clear next screen
+3:		move.b %d0,VGADATA		| read one byte
+		dbra %d1,3b			| back for more copying
+
+		movea.l #VGAOFFSETADDRHI,%a0	| load pointer for writing
+		move.w #0,%d0			| bottom of 1st screen
+		movep.w %d0,(0,%a0)		| move there
+		move.w #60,row			| reset scroll offset
+
+vgaseekscrollo:	movem.l (%sp)+,%d0-%d1/%a0
 		rts
-1:		clr.w %d0
-		bra 2b
 
 vgaseek:	movem.l %d1/%a0,-(%sp)
 		move.w row,%d1			| get the row
@@ -62,6 +101,7 @@ vgaputstr:	move.w %d0,-(%sp)
 | vgaputstr - write the character in %d0
 
 vgaputchar:	movem.l %d0/%a0,-(%sp)
+|		bsr putchar			| send to serial too
 		cmp.b #ASC_CR,%d0		| look for carriage return
 		beq handlecr			| yes? handle it
 		cmp.b #ASC_LF,%d0		| look for line feed
@@ -70,6 +110,8 @@ vgaputchar:	movem.l %d0/%a0,-(%sp)
 		beq handlebs			| yes? handle it
 		cmp.b #ASC_FF,%d0		| look for form feed (clear)
 		beq handleff			| yes? handle it
+		cmp.b #ASC_BEL,%d0		| look for bell character
+		beq handlebell			| yes? handle it
 		btst.b #7,%d0			| high bit set
 		bne vgaputcharo			| yes? ignor this write
 		cmp.b #ASC_SP,%d0		| unknown control code?
@@ -101,13 +143,11 @@ oldlineneeded:	subq.w #1,row			| back one row then
 handleff:	bsr vgaclear			| clear the screen and home
 		bra vgaputcharo			| no need to move cursor
 
-vgaup:		subq.w #1,scrollrow		| dec scroll counter
-		bsr vgaseekscroll		| update
-		rts
-
-vgadown:	addq.w #1,scrollrow		| inc scroll counter
-		bsr vgaseekscroll		| update
-		rts
+handlebell:	move.b #0,VGACONFIG		| red background
+		move.w #65535-1,%d1		| delay init
+1:		dbra %d1,1b			| wait for a bit
+		move.b #0x0f,VGACONFIG		| back to white on black
+		bra vgaputcharo
 
 		.section .bss
 		.align 2
@@ -115,3 +155,4 @@ vgadown:	addq.w #1,scrollrow		| inc scroll counter
 row:		.space 2			| 0->available memory
 column:		.space 2			| 0->79
 scrollrow:	.space 2			| 0->available memory
+scrollbuffer:	.space 80*60			| one screen worth
