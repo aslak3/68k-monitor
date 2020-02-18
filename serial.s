@@ -8,6 +8,7 @@
 		.global putstr
 		.global getstr
 		.global putchar
+		.global getchar
 
 serialinit:	move.b #0b00010011,XR88C681MR1B	| 8n
 		move.b #0b00000111,XR88C681MR2B	| one full stop bit

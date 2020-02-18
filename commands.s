@@ -33,6 +33,15 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "testvread", 3, 2, 2
 		checkcommand "testvwrite", 3, 2, 2
 		checkcommand "checksum", 3, 2
+		checkcommand "memcopy", 3, 2, 3
+		checkcommand "patternfill" 3, 2
+		checkcommand "showbmp", 3
+		nocheckcommand "showmcqueen"
+		nocheckcommand "testtextmode"
+		checkcommand "setattrib", 1
+		checkcommand "sendspi", 2
+		checkcommand "sendkeyboard", 1
+		nocheckcommand "showkeyboard"
 		endcommand		
 
 		.section .text
@@ -301,6 +310,21 @@ testvwrite:	movea.l (0*4,%a1),%a0		| get address to read from
 		dbra %d0,1b
 		rts
 
+memcopy:	movea.l (0*4,%a1),%a0		| get address to read from
+		move.w (1*4+2,%a1),%d1		| get the length
+		subq.w #1,%d1			| used in dbra
+		movea.l (2*4,%a1),%a1		| get the detstination
+1:		move.l (%a0)+,(%a1)+		| copy the long
+		dbra %d1,1b			| more?
+		rts
+
+patternfill:	movea.l (0*4,%a1),%a0		| get address to read from
+		move.w (1*4+2,%a1),%d1		| get the length
+		subq.w #1,%d1			| used in dbra
+1:		move.w %d1,(%a0)+		| write the counter
+		dbra %d1,1b
+		rts
+
 checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		move.w (1*4+2,%a1),%d1		| get the length
 		subq.w #1,%d1			| used in dbra
@@ -314,6 +338,57 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		movea.l #printbuffer,%a0	| wind buffer back
 		bsr vgaputstr			| and print it
 		rts
+
+showbmp:	movea.l (0*4,%a1),%a0		| get the address of bmp
+		bsr bmpshow			| display and wait
+		rts		
+
+showmcqueen:	movea.l #_mcqueen_start,%a0
+		bsr bmpshow
+		rts
+
+testtextmode:	move.w #80*60,%d0
+		bsr vgaclear
+		clr.b %d1
+		move.b #0x80,%d2
+1:		move.b %d1,VGADATA		| character
+		move.b %d2,VGADATA		| attribute
+		addq.b #1,%d1
+		addq.b #1,%d2
+		dbra %d0,1b
+		bsr getchar
+		bsr vgaclear
+		rts
+
+setattrib:	move.b (0*4+3,%a1),attributes
+		rts
+
+sendspi:	move.w (0*4+2,%a1),%d0
+		bra sendspiword
+		rts
+
+sendkeyboard:	move.b (0*4+3,%a1),%d0
+		bsr putkeychar
+		rts
+
+showkeyboard:	clr.w %d0
+		bsr getkeychar
+		beq showkeyboardo
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr bytetoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr vgaputstr			| and print it
+		bra showkeyboard
+		
+showkeyboardo:	rts
+
+		.section .rodata
+		.align 2
+
+_mcqueen_start:
+_mcqueen_end:
 		
 		.section .bss
 		.align 2

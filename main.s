@@ -16,8 +16,14 @@ start:
 		dbra %d1,1b			| next 64KB block
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
-		bsr timerinit			| prepare the timer
+|		bsr timerinit			| prepare the timer
 		bsr vgainit
+		bsr keyboardinit
+
+		move.w #1024-1,%d0
+		movea.l #0x8000,%a0
+1:		move.w #0xff00,(%a0)+
+		dbra %d0,1b
 
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
 		bsr vgaputstr			| ...

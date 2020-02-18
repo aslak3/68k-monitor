@@ -48,15 +48,6 @@ vgmplayer:	move.l MAGIC_O(%a6),%d0
 		clr.w countdown
 		rts
 
-labelprintlong:	movea.l #printbuffer,%a0
-		bsr strconcat
-		bsr longtoascii
-		lea (newlinemsg,%pc),%a1	| need a newline
-		bsr strconcat
-		movea.l #printbuffer,%a0
-		bsr vgaputstr
-		rts
-
 vgmstop:	clr running
 		rts
 
