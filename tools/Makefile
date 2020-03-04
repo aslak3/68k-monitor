@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -O2
 
-BINS = flasher
+BINS = flasher fileserver
 
 all: $(BINS)
 

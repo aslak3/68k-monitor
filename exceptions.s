@@ -29,7 +29,7 @@ zerodivide:	lea (zerodividemsg,%pc),%a0
 		bra 2f
 
 2:		move.b #0xff,LED
-		bsr putstr
+		bsr conputstr
 		movea.l #buffer,%a0
 		lea (srmsg,%pc),%a1
 		bsr strconcat
@@ -44,7 +44,7 @@ zerodivide:	lea (zerodividemsg,%pc),%a0
 		lea (newlinemsg,%pc),%a1
 		bsr strconcat
 		movea.l #buffer,%a0
-		bsr putstr
+		bsr conputstr
 9:		move.w #0xffff,%d0
 		move.b #0,LED
 10:		dbra %d0,10b

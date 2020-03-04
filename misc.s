@@ -25,6 +25,6 @@ labelprintlong:	movem.l %a0,-(%sp)
 		lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat
 		movea.l #printbuffer,%a0
-		bsr vgaputstr
+		bsr conputstr
 		movem.l (%sp)+,%a0
 		rts

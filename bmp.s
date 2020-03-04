@@ -28,7 +28,7 @@ bmpshow:	move.l DATA_OFFSET_O(%a0),%d0	| get offset of pixel data
 		dbra %d0,2b			| back for more
 		suba.l #(640/8)*2,%a0		| to the next line
 		dbra %d1,1b			| and jump, if more to do
-		bsr getchar			| wait for a key
+		bsr congetchar			| wait for a key
 		move.w #80*60*2,%d0		| top of the pic
 		move.w #480-1,%d1
 1:		movep.w %d0,(0,%a2)		| set offset
@@ -36,7 +36,7 @@ bmpshow:	move.l DATA_OFFSET_O(%a0),%d0	| get offset of pixel data
 		move.w #0x1000,%d2		| setup delay
 2:		dbra %d2,2b			| delay loop
 		dbra %d1,1b			| next line
-		bsr vgaclear
+		bsr conclear
 		rts
 
 		.section .ronly

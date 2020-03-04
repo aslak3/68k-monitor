@@ -10,6 +10,7 @@
 		.global strmatcharray
 		.global strconcat
 		.global makecharprint
+		.global toupper
 
 | convert the byte in d0 to hex, writing it into a0 and advancing it 2
 | bytes. d0.w is retained
@@ -76,7 +77,7 @@ two:		.byte 2				| 3
 | a0 will be moved to the first non printable char. sets zero on error.
 
 asciitoint:	movem.l %a1/%d2,-(%sp)
-		move.l #0,%d0			| set result to zero
+		clr.l %d0			| set result to zero
 		move.w #0,%d1			| clear digit counter
 		bra 3f				| branch into loop
 1:		sub.b #'0,%d2			| subtract '0'
@@ -160,3 +161,10 @@ makecharprint:	cmp.b #0x20,%d0			| compare with space
 		rts				| if not, leave it alone
 1:		move.b #'.',%d0			| otherwise flatten it to dot
 		rts
+
+toupper:	cmp.b #'a,%d0			| compare with "a"
+		blo 1f				| lower? not a letter
+		cmp.b #'z,%d0			| compare with "z"
+		bhi 1f				| higher? not a letter
+		sub.b #'a-'A,%d0		| convert to uppercase
+1:		rts

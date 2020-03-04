@@ -2,11 +2,10 @@
 		.include "include/hardware.i"
 
 		.global vgainit
-		.global vgaclear
-		.global vgaputchar
-		.global vgaputstr
-		.global vgaseek
-		.global vgascroll
+
+		.global conclear
+		.global conputchar
+		.global conputstr
 		.global attributes
 
 		.section .text
@@ -16,6 +15,7 @@ vgainit:	bsr vgaclear			| just a clear
 		move.b #0x00,attributes		| use vga impl default
 		rts
 
+conclear:
 vgaclear:	movem.w %d0-%d1,-(%sp)
 		clr.b %d1			| used for 0 
 		move.w #65536-1,%d0		| clear all 64KB
@@ -101,19 +101,17 @@ vgaseek:	movem.l %d0-%d1/%a0,-(%sp)
 		movem.l (%sp)+,%d0-%d1/%a0
 		rts
 
-
-vgaputstr:	move.w %d0,-(%sp)
+conputstr:	move.w %d0,-(%sp)
 1:		move.b (%a0)+,%d0		| get the byte to send
 		beq 2f				| null? done 
-		bsr vgaputchar			| send that byte
+		bsr conputchar			| send that byte
 		bra 1b				| back for more
 2:		move.w (%sp)+,%d0
 		rts
 
 | vgaputstr - write the character in %d0
 
-vgaputchar:	movem.l %d0/%a0,-(%sp)
-		bsr putchar			| send to serial too
+conputchar:	movem.l %d0/%a0,-(%sp)
 		cmp.b #ASC_CR,%d0		| look for carriage return
 		beq handlecr			| yes? handle it
 		cmp.b #ASC_LF,%d0		| look for line feed
