@@ -1,62 +1,35 @@
 		.align 2
 
-		.equ LED, 0x100001
-		.equ BUZZER, 0x100003
-		.equ SYSCONF, 0x100005
+		.include "../include/hardware.i"
 
-		.equ BASE2681, 0x200001
-		.equ MR1A2681, BASE2681+0
-		.equ MR2A2681, BASE2681+0
-		.equ SRA2681, BASE2681+2
-		.equ CSRA2681, BASE2681+2
-		.equ BRGEXT2681, BASE2681+4
-		.equ CRA2681, BASE2681+4
-		.equ RHRA2681, BASE2681+6
-		.equ THRA2681, BASE2681+6
-		.equ IPCR2681, BASE2681+8
-		.equ ACR2681, BASE2681+8
-		.equ ISR2681, BASE2681+10
-		.equ IMR2681, BASE2681+10
-		.equ CTU2681, BASE2681+12
-		.equ CRUR2681, BASE2681+12
-		.equ CTL2681, BASE2681+14
-		.equ CTLR2681, BASE2681+14
-		.equ MR1B2681, BASE2681+16
-		.equ MR2B2681, BASE2681+16
-		.equ SRB2681, BASE2681+18
-		.equ CSRB2681, BASE2681+18
-		.equ TEST2681, BASE2681+20
-		.equ CRB2681, BASE2681+20
-		.equ RHRB2681, BASE2681+22
-		.equ THRB2681, BASE2681+22
-		.equ SCRATCH2681, BASE2681+24
-		.equ IP2681, BASE2681+26
-		.equ OPCR2681, BASE2681+26
-		.equ STARTCOM2681, BASE2681+28
-		.equ SETOPCOM2681, BASE2681+28
-		.equ STOPCOM2681, BASE2681+30
-		.equ RESETOPCOM2681, BASE2681+30
+		.equ ROMB, _rom_start
 
 		.section .vectors, #alloc
 
-resetsp:	.long 0x008000			| the initial sp
+resetsp:	.long 0x0ffff0			| the initial sp
 resetpc:	.long _start			| the initial pc
 
 		.section .text
 
 _start:		move.b #0x00,SYSCONF		| write protect eeprom
 
-		move.b #0b00010011,MR1A2681	| 8n
-		move.b #0b00000111,MR2A2681	| one full stop bit
-		move.b #0b10111011,CSRA2681	| 9600
-		move.b #0b00000101,CRA2681	| enable rx and tx
+|		move.w #0xffff,LED
+|		move.l #0,%d0
+|		bsr setmemtolong
+|		move.w #0,LED
+|		bsr cmpmemtolong
+
+		move.b #0b10000011,LCR16C654+BASEPB
+		move.b #0x0c, DLL16C654+BASEPB	| 38.4kbaud
+		move.b #0, DLM16C654+BASEPB
+		move.b #0b00000011, LCR16C654+BASEPB
 
 		move.b #0x00,LED
 		move.b #0x00,BUZZER
 
 		movea.l #_rom_start,%a0		| get the start of rom
 		movea.l #ramcopy,%a1		| get where to copy it to
-		move.w #2048/4-1,%d0		| copy 512 times
+		move.w #8192/4-1,%d0		| copy 2048 times
 1:		move.l (%a0)+,(%a1)+		| copy longs
 		dbra %d0,1b			| back for more
 
@@ -95,27 +68,48 @@ flasher:	bsr getchar			| highbyte of page count
 		movea.l #flashreadymsg,%a0
 		bsr putstring			| ... we are ready
 
-		movea.l #realrom,%a1		| copying into 2KB in
+		movea.l #realrom,%a1		| copying into 8KB in
 
 		move.b #0x01,SYSCONF		| write enable eeprom
 
-pagestart:	movea.l #sixtyfourbytes,%a0	| ram copy of page
-		move.w #64-1,%d1		| 64bytes for a page
+pagestart:	movea.l #eightkbytes,%a0	| ram copy of page
+		move.w #8192-1,%d1		| 8kbytes for a page
 1:		bsr getchar			| get a byte
 		move.b %d0,(%a0)+		| save it in ram
 		dbra %d1,1b			| back for more
 
-		movea.l #sixtyfourbytes,%a0	| ram copy of page
-		move.w #64/4-1,%d1		| 64bytes for a page
-1:		move.l (%a0)+,(%a1)+		| save it to realrom
-		dbra %d1,1b			| back for more
+		move.w #0xaaaa,ROMB+(0x5555*2)	| sector erase 1st cycle
+		move.w #0x5555,ROMB+(0x2aaa*2)	| sector erase 2nd cycle
+		move.w #0x8080,ROMB+(0x5555*2)	| sector erase 3rd cycle
+		move.w #0xaaaa,ROMB+(0x5555*2)	| sector erase 4th cycle
+		move.w #0x5555,ROMB+(0x2aaa*2)	| sector erase 5th cycle
+		move.w #0x3030,(%a1)		| finally set the sector
 
-		move.w #0xff00,%d0		| delay, maybe 10ms?
+		move.b #1,LED
+		move.w #0xff00,%d0		| delay, maybe 20mS?
 1:		dbra %d0,1b
+		move.b #0,LED
+
+|		bsr togglepoll
+
+		movea.l #eightkbytes,%a0	| ram copy of page
+		move.w #8192/2-1,%d1		| 8kbytes for a page
+
+1: 		move.w #0xaaaa,ROMB+(0x5555*2)	| byte program 1st cycle
+		move.w #0x5555,ROMB+(0x2aaa*2)	| byte program 2nd cycle
+		move.w #0xa0a0,ROMB+(0x5555*2)	| byte program 3rd cycle
+		move.w (%a0)+,(%a1)		| save it to realrom
+
+		move.w #0x20,%d0		| delay, maybe 20uS?
+2:		dbra %d0,2b
+
+|		bsr togglepoll
+		addq.l #2,%a1
+
+3:		dbra %d1,1b			| back for more
 
 		move.b #0x23,%d0		| "#"
 		bsr putchar			| tell the other next block
-
 		dbra %d2,pagestart		| get remaining pages
 
 		move.b #0x00,SYSCONF		| write protect eeprom
@@ -127,7 +121,6 @@ pagestart:	movea.l #sixtyfourbytes,%a0	| ram copy of page
 		bsr putchar			| send it back
 		cmp.l %a0,%a1			| past the end?
 		bne 1b				| back for the next byte
-
 		bra normalstart			| start in new realrom
 
 | put the string in a0
@@ -140,9 +133,9 @@ putstring:	move.b (%a0)+,%d0		| get the byte to put
 
 | put the char in d0
 
-putchar:	btst.b #2,SRA2681		| busy sending last char?
+putchar:	btst.b #5,LSR16C654+BASEPB	| busy sending last char?
 		beq putchar			| yes, look again
-		move.b %d0,THRA2681		| put that byte
+		move.b %d0,THR16C654+BASEPB	| put that byte
 		rts
 
 | get a string in a0
@@ -160,9 +153,9 @@ getstring:	bsr getchar
 
 | get a char in d0
 
-getchar:	btst.b #0,SRA2681		| chars?
+getchar:	btst.b #0,LSR16C654+BASEPB	| chars?
 		beq getchar			| no chars yet
-		move.b RHRA2681,%d0		| get it in d0
+		move.b RHR16C654+BASEPB,%d0	| get it in d0
 		rts
 
 | get a char with a two second (ish) timeout, exit zero for got a char
@@ -171,12 +164,63 @@ getchar:	btst.b #0,SRA2681		| chars?
 getcharwithto:	move.w #0xffff,%d0		| get timer
 1:		sub.w #1,%d0			| dec timer
 		beq 2f				| timeout reached
-		btst.b #0,SRA2681		| chars?
+		btst.b #0,LSR16C654+BASEPB	| chars?
 		beq 1b				| no chars yet
-		move.b RHRA2681,%d0		| get it in d0
+		move.b RHR16C654+BASEPB,%d0	| get it in d0
 		ori #0x04,%ccr			| set zero
 		rts
 2:		ori #0xfb,%ccr			| clear zero
+		rts
+
+||| memory tests
+
+setmemtolong:	move.l %d0,%d7
+		movea.l #0,%a0			| start at 0
+		move.w #(((1024*1024)/4)/1024)-2,%d2
+						| number of 64K long blocks
+1:		move.w #1024-1,%d1		| 64K of long words
+2:		move.l %d0,(%a0)+		| set to d1 value
+		addq.l #1,%d0
+                dbra %d1,2b			| back for more
+                dbra %d2,1b			| next 64KB block
+		move.l %d7,%d0
+		rts
+
+cmpmemtolong:	move.l %d0,%d7
+		movea.l #0,%a0			| start at 0
+		move.w #(((1024*1024)/4)/1024)-2,%d2
+						| number of 1K long blocks
+1:		move.w #1024-1,%d1		| 64K of long words
+2:		move.l (%a0)+,%d3		| see if match
+		cmp.l %d0,%d3
+		bne error
+		addq.l #1,%d0
+                dbra %d1,2b			| back for more
+                dbra %d2,1b			| next 64KB block
+		move.l %d7,%d0
+		rts
+
+error:		move.w #0xffff,LED
+		move.w #0xff0,%d0
+1:		dbra %d0,1b
+		move.w #0,LED
+		move.w #0xfff0,%d0
+2:		dbra %d0,2b
+		bra error
+
+togglepoll:	movem.w %d0-%d1,-(%sp)
+		move.b #0,LED
+		move.w (%a1),%d0		| read base address
+		and.w #0x4040,%d0
+		move.w %d0,%d1
+1:		and.w #0x4040,%d0		| get new state of toggle
+		cmp.w %d0,%d1
+		bne 2f
+		move.w %d0,%d1
+		move.w (%a1),%d0
+		bra 1b
+2:		movem.w (%sp)+,%d0-%d1
+		move.b #1,LED
 		rts
 
 		.section .rodata
@@ -196,5 +240,7 @@ realrom:	movea.l #norealrommsg,%a0
 
 		.section .bss
 
-ramcopy:	.space 2048			| copy of bootloader
-sixtyfourbytes:	.space 64			| one eeprom page
+ramcopy:	.space 8192			| copy of bootloader
+eightkbytes:	.space 8192			| one eeprom page
+delay:		.space 2
+buffer:		.space 100

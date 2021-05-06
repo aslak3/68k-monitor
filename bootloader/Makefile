@@ -9,6 +9,16 @@ LOWERBINS = $(addsuffix -lower.bin, $(basename $(SINGLEBINS)))
 
 BINS = $(UPPERBINS) $(LOWERBINS)
 
+BOARD = MAXI000
+
+ifeq ($(BOARD), MINI000)
+TARGET = AT28C256
+PAD = 0xf10000
+else ifeq ($(BOARD), MAXI000)
+TARGET = SST39SF040@PLCC32
+PAD = 0x1000000
+endif
+
 all: $(BINS)
 
 %.o: %.s
@@ -18,7 +28,7 @@ all: $(BINS)
 	$(LD) -T linker.scr -nostdlib $< -o $@
 
 %.bin: %.elf
-	$(OBJCOPY) --pad-to 0xf10000 -O binary $< $@
+	$(OBJCOPY) --pad-to $(PAD) -O binary $< $@
 
 %-upper.bin: %.bin
 	$(OBJCOPY) --interleave=2 --byte=0 -I binary -O binary $< $@
@@ -26,7 +36,9 @@ all: $(BINS)
 	$(OBJCOPY) --interleave=2 --byte=1 -I binary -O binary $< $@
 
 upload:
-	$(UPLOAD) -p AT28C256 -w $(BIN) -P
+	$(UPLOAD) -p $(TARGET) -w $(BIN) -P
+download:
+	$(UPLOAD) -p $(TARGET) -r $(BIN) -P
 	
 clean:
 	rm -f *.o *.elf *.bin
