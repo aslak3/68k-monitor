@@ -1,4 +1,4 @@
-		.include "include/ascii.i"
+ 		.include "include/ascii.i"
 		.include "include/hardware.i"
 
 		.section .text
@@ -9,11 +9,18 @@
 		.global sergetstr
 		.global serputchar
 		.global sergetchar
+		.global dlgetchar
+		.global dlputchar
+		.global dlputstr
 
-serialinit:	move.b #0b00010011,XR88C681MR1B	| 8n
-		move.b #0b00000111,XR88C681MR2B	| one full stop bit
-		move.b #0b10111011,XR88C681CSRB	| 9600
-		move.b #0b00000101,XR88C681CRB	| enable rx and tx
+serialinit:	move.b #0b10000011,LCR16C654+BASEPA
+		move.b #0x0c, DLL16C654+BASEPA	| 9600
+		move.b #0, DLM16C654+BASEPA
+		move.b #0b00000011, LCR16C654+BASEPA
+		move.b #0b10000011,LCR16C654+BASEPB
+		move.b #0x0c, DLL16C654+BASEPB	| 9600
+		move.b #0, DLM16C654+BASEPB
+		move.b #0b00000011, LCR16C654+BASEPB
 		rts
 
 serputstr:	move.w %d0,-(%sp)
@@ -26,9 +33,9 @@ serputstr:	move.w %d0,-(%sp)
 
 | put the char in d0
 
-serputchar:	btst.b #2,XR88C681SRB		| busy sending last char?
+serputchar:	btst.b #5,LSR16C654+BASEPA	| busy sending last char?
 		beq serputchar			| yes, look again
-		move.b %d0,XR88C681THRB		| put that byte
+		move.b %d0,THR16C654+BASEPA	| put that byte
 		rts
 
 | get a str in a0
@@ -70,7 +77,27 @@ getstrbs:	tst.w %d1			| see if the char count is 0
 
 | get a char in d0
 
-sergetchar:	btst.b #0,XR88C681SRB		| chars?
+sergetchar:	btst.b #0,LSR16C654+BASEPA	| chars?
 		beq sergetchar			| no chars yet
-		move.b XR88C681RHRB,%d0		| get it in d0
+		move.b RHR16C654+BASEPA,%d0	| get it in d0
+		rts
+
+|||
+
+dlputchar:	btst.b #5,LSR16C654+BASEPB	| busy sending last char?
+		beq dlputchar			| yes, look again
+		move.b %d0,THR16C654+BASEPB	| put that byte
+		rts
+
+dlgetchar:	btst.b #0,LSR16C654+BASEPB	| chars?
+		beq dlgetchar			| no chars yet
+		move.b RHR16C654+BASEPB,%d0	| get it in d0
+		rts
+
+dlputstr:	move.w %d0,-(%sp)
+1:		move.b (%a0)+,%d0		| get the byte to put
+		beq 2f				| end of message, done
+		bsr dlputchar			| output the char in d0
+		bra 1b				| back for more
+2:		move.w (%sp)+,%d0
 		rts

@@ -46,9 +46,13 @@ vgmplayer:	move.l MAGIC_O(%a6),%d0
 		bsr labelprintlong
 		move.w #1,running
 		clr.w countdown
+
+		bsr timerinit
+
 		rts
 
 vgmstop:	clr running
+		bsr timeruninit
 		rts
 
 		.section .rodata
@@ -102,6 +106,7 @@ countn:		move.b (%a0)+,%d0		| bottom half
 		lsl.w #8,%d0			| move up
 		move.b (%a0)+,%d0		| top half
 		ror.w #8,%d0			| byteswap
+		lsr.w #4,%d0			| scale by 16
 		move.w %d0,countdown		| save countdown value
 		bra out1
 

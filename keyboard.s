@@ -11,19 +11,23 @@
 		.global congetchar
 
 
-keyboardinit:	move.b #0b00010011,SCC68681MR1A	| 8n
-		move.b #0b00000111,SCC68681MR2A	| one full stop bit
-		move.b #0b10111011,SCC68681CSRA	| 9600
-		move.b #0b00000101,SCC68681CRA	| enable rx and tx
+keyboardinit:	move.b #0b10000011,LCR16C654+BASEPD
+		move.b #0x30, DLL16C654+BASEPD  | 9600
+		move.b #0, DLM16C654+BASEPD
+		move.b #0b00000011, LCR16C654+BASEPD
 		move.b #6,%d0
 		bsr conputmcuchar
+		clr.w leftshifton
+		clr.w rightshifton
+		clr.w capslockon
+		clr.w controlon
 		rts
 
 | put the char in d0
 
-conputmcuchar:	btst.b #2,SCC68681SRA		| busy sending last char?
-		beq conputmcuchar			| yes, look again
-		move.b %d0,SCC68681THRA		| put that byte
+conputmcuchar:	btst.b #5,LSR16C654+BASEPD	| busy sending last char?
+		beq conputmcuchar		| yes, look again
+		move.b %d0,THR16C654+BASEPD	| put that byte
 		rts
 
 | get a str in a0
@@ -65,10 +69,11 @@ getstrbs:	tst.w %d1			| see if the char count is 0
 
 | get a char in d0 - guaranteed to have high byte 0
 
-congetchar:	btst.b #0,SCC68681SRA		| chars?
+congetchar:	btst.b #0,LSR16C654+BASEPD	| chars?
 		beq congetchar			| no chars yet
-		clr.w %d0			| make sure high byte is 0
-		move.b SCC68681RHRA,%d0		| get it in d0
+		clr.w %d0			| clear the top byte as well
+		move.b RHR16C654+BASEPD,%d0	| get it in d0
+		move.b %d0,SPIDATA
 		bsr mapscancode			| translate to ascii
 		tst.b %d0			| printable?
 		beq congetchar			| back for more

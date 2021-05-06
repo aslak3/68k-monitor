@@ -11,10 +11,20 @@ vectortable:	.space 256*4
 		.section .text
 		.align 2
 
-exceptionsinit:	move.l #buserror,VBUSERROR
+exceptionsinit:	move.l #8,%a0
+		move.l #0x400,%d0
+		move.w #256-1,%d1
+1:		move.l %d0,(%a0)+
+		addq.l #4,%d0
+		dbra %d1,1b
+
+		move.l #buserror,VBUSERROR
 		move.l #addresserr,VADDRESSERROR
 		move.l #illegalinst,VILLEGALINSTRUCTION
 		move.l #zerodivide,VZERODIVIDE
+		move.l #badpriv,VBADPRIV
+		move.l #badvector,VBADVECTOR
+		move.l #spurious,VSPURIOUS
 		rts
 
 buserror:	lea (buserrormsg,%pc),%a0
@@ -26,6 +36,12 @@ addresserr:	lea (addresserrmsg,%pc),%a0
 illegalinst:	lea (illegalinstmsg,%pc),%a0
 		bra 2f
 zerodivide:	lea (zerodividemsg,%pc),%a0
+		bra 2f
+badpriv:	lea (badprivmsg,%pc),%a0
+		bra 2f
+badvector:	lea (badvectormsg,%pc),%a0
+		bra 2f
+spurious:	lea (spuriousmsg,%pc),%a0
 		bra 2f
 
 2:		move.b #0xff,LED
@@ -60,6 +76,9 @@ buserrormsg:	.asciz "\r\n*** Bus error, halt.\r\n"
 addresserrmsg:	.asciz "\r\n*** Address error, halt.\r\n"
 illegalinstmsg:	.asciz "\r\n*** Illegal instruction, halt.\r\n"
 zerodividemsg:	.asciz "\r\n*** Divide by zero, halt.\r\n"
+badprivmsg:	.asciz "\r\n*** Privilege Voilation, halt\r\n"
+badvectormsg:	.asciz "\r\n*** Unitialised interrupt vector, halt\r\n"
+spuriousmsg:	.asciz "\r\n*** Spurious interrupt, halt\r\n"
 srmsg:		.asciz "SR: "
 pcmsg:		.asciz "PC: "
 spmsg:		.asciz "SP: "

@@ -1,3 +1,4 @@
+
 		.include "include/macros.i"
 		.include "include/ascii.i"
 		.include "include/hardware.i"
@@ -5,6 +6,7 @@
 		.global commandarray
 		.global printbuffer
 		.global clear
+		.global testtextmode
 
 		.section .rodata
 		.align 2
@@ -26,25 +28,41 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "diskidentify", 3
 		checkcommand "diskread", 3, 2, 1
 		checkcommand "diskwrite", 3, 2, 1
-		checkcommand "playvgm", 3
-		nocheckcommand "stopvgm"
+|		checkcommand "playvgm", 3
+|		nocheckcommand "stopvgm"
 		nocheckcommand "showticks"
-		nocheckcommand "clear"
+		checkcommand "clear", 3
 		checkcommand "testvread", 3, 2, 2
 		checkcommand "testvwrite", 3, 2, 2
 		checkcommand "checksum", 3, 2
 		checkcommand "memcopy", 3, 2, 3
-		checkcommand "patternfill" 3, 2
-		checkcommand "showbmp", 3
-		nocheckcommand "testtextmode"
-		checkcommand "setattrib", 1
-		checkcommand "sendspiw", 2
-		checkcommand "sendspib", 1
-		checkcommand "sendkeyboard", 1
-		nocheckcommand "showkeyboard"
-		nocheckcommand "sawtest"
+		checkcommand "patternfillw" 3, 2
+		checkcommand "patternfillb" 3, 2
+		checkcommand "memfill", 3, 2, 2
+|		checkcommand "showbmp", 3
+|		nocheckcommand "testtextmode"
+|		nocheckcommand "testattribs"
+|		checkcommand "setattrib", 1
+		checkcommand "spitxrx", 1, 3, 2, 3, 2
+|		checkcommand "sendkeyboard", 1
+|		nocheckcommand "showkeyboard"
+|		nocheckcommand "sawtest"
 		checkcommand "download", 0x80, 3
-		checkcommand "playpcm", 3, 3, 1
+		checkcommand "playpcm", 1, 3, 3, 1
+		nocheckcommand "showscancodes"
+		checkcommand "keyleds", 1
+		nocheckcommand "ledon"
+		nocheckcommand "ledoff"
+		nocheckcommand "reset"
+|		nocheckcommand "mousetest"
+		checkcommand "dma", 3, 2
+		nocheckcommand "memtest"
+		nocheckcommand "vidmemtest"
+		nocheckcommand "anajoytest"
+		checkcommand "i2ctx", 1, 3, 2
+		checkcommand "i2crx", 1, 3, 2
+		checkcommand "eepromread", 1, 3, 2, 2
+		checkcommand "eepromwrite", 1, 3, 2, 2
 		endcommand		
 
 		.section .text
@@ -238,16 +256,16 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    diskidentify addr.l : write disk identify data at addr\r\n"
 		.ascii "    diskread addr.l sector.w count.b : read  sector, count 512B sectors\r\n"
 		.ascii "    diskwrite addr.l sector.w count.b : write sector, count 512B sectors\r\n"
-		.ascii "Video Game Music:\r\n"
-		.ascii "    playvgm addr.l : play VGM file from memory at addr\r\n"
-		.ascii "    stopvgm : stop VGM playback\r\n"
+|		.ascii "Video Game Music:\r\n"
+|		.ascii "    playvgm addr.l : play VGM file from memory at addr\r\n"
+|		.ascii "    stopvgm : stop VGM playback\r\n"
 		.ascii "Other:\r\n"
-		.ascii "    showticks : show the tick count in 1/44100 seconds\r\n"
+|		.ascii "    showticks : show the tick count in 1/44100 seconds\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser\r\n"
 		.ascii "    testvread addr.l start.w count.w : test video read into addr\r\n"
 		.ascii "    testvwrite addr.l start.w count.w : test video write from addr\r\n"
 		.ascii "    checksum addr.l count.w : checksum memory, connt in longs\r\n"
-		.ascii "    clear : clear the screen\r\n"
+		.ascii "    clear data.l : clear the screen with data\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
 
@@ -270,12 +288,12 @@ diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
 		bsr idewrite			| do the write command
 		rts
 
-playvgm:	movea.l (0*4,%a1),%a6		| get the start addr into a6
-		bsr vgmplayer			| start the playback
-		rts
+|playvgm:	movea.l (0*4,%a1),%a6		| get the start addr into a6
+|		bsr vgmplayer			| start the playback
+|		rts
 
-stopvgm:	bsr vgmstop			| simple wrapper
-		rts
+|stopvgm:	bsr vgmstop			| simple wrapper
+|		rts
 
 showticks:	move.l timerticks,%d0
 		movea.l #printbuffer,%a0	| set the output buffer
@@ -284,32 +302,37 @@ showticks:	move.l timerticks,%d0
 		bsr strconcat			| add it
 		movea.l #printbuffer,%a0	| wind buffer back
 		bsr conputstr			| and print it
+		move.l vblticks,%d0
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr longtoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr conputstr			| and print it
 		rts
 
-clear:		move.b #ASC_FF,%d0
-		bsr conputchar
+clear:		move.l (0*4,%a1),%d2
+		bsr conclear
 		rts
 
 testvread:	movea.l (0*4,%a1),%a0		| get address to write in
 		move.w (1*4+2,%a1),%d1		| get the start
 		move.w (2*4+2,%a1),%d0		| and the count
-		lsl.w #2,%d0			| count was in longs
 		subq.w #1,%d0			| used in dbra
-		movea.l #VGAREADADDRHI,%a1	| load pointer
-		movep.w %d1,(0,%a1)		| one hit
-		move.b VGADATA,%d1		| dumamy read
-1:		move.b VGADATA,(%a0)+
+		move.w %d1,VGARWADDRLO		| one hit
+		movea.l #VGADATA,%a1
+		move.w (%a1),%d1		| dumamy read
+1:		move.w (%a1),(%a0)+
 		dbra %d0,1b
 		rts
 
 testvwrite:	movea.l (0*4,%a1),%a0		| get address to read from
 		move.w (1*4+2,%a1),%d1		| get the start
 		move.w (2*4+2,%a1),%d0		| and the count
-		lsl.w #2,%d0			| count was in longs
 		subq.w #1,%d0			| used in dbra
-		movea.l #VGAWRITEADDRHI,%a1	| load pointer
-		movep.w %d1,(0,%a1)		| one hit
-1:		move.b (%a0)+,VGADATA
+		move.w %d1,VGARWADDRLO		| one hit
+		movea.l #VGADATA,%a1
+1:		move.w (%a0)+,(%a1)
 		dbra %d0,1b
 		rts
 
@@ -321,12 +344,29 @@ memcopy:	movea.l (0*4,%a1),%a0		| get address to read from
 		dbra %d1,1b			| more?
 		rts
 
-patternfill:	movea.l (0*4,%a1),%a0		| get address to read from
+patternfillw:	movea.l (0*4,%a1),%a0		| get address to read from
 		move.w (1*4+2,%a1),%d1		| get the length
 		subq.w #1,%d1			| used in dbra
 1:		move.w %d1,(%a0)+		| write the counter
 		dbra %d1,1b
 		rts
+
+patternfillb:	movea.l (0*4,%a1),%a0		| get address to read from
+		move.w (1*4+2,%a1),%d1		| get the length
+		subq.w #1,%d1			| used in dbra
+1:		move.b %d1,(%a0)+		| write the counter
+		dbra %d1,1b
+		rts
+
+memfill:	movea.l (0*4,%a1),%a0		| get address to read from
+		move.w (1*4+2,%a1),%d1		| get the length
+		move.w (2*4+2,%a1),%d0
+		subq.w #1,%d1			| used in dbra
+1:		move.w %d0,(%a0)+		| write the counter
+		dbra %d1,1b
+		rts
+
+
 
 checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		move.w (1*4+2,%a1),%d1		| get the length
@@ -342,54 +382,141 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		bsr conputstr			| and print it
 		rts
 
-showbmp:	movea.l (0*4,%a1),%a0		| get the address of bmp
-		bsr bmpshow			| display and wait
-		rts		
+|showbmp:	movea.l (0*4,%a1),%a0		| get the address of bmp
+|		bsr bmpshow			| display and wait
+|		rts		
 
-testtextmode:	move.w #80*60,%d0
-		bsr conclear
-		clr.b %d1
-		move.b #0x80,%d2
-1:		move.b %d1,VGADATA		| character
-		move.b %d2,VGADATA		| attribute
-		addq.b #1,%d1
-		addq.b #1,%d2
-		dbra %d0,1b
-		bsr congetchar
-		bsr conclear
+|testtextmode:	move.w #80*60,%d0
+|		bsr conclear
+|		clr.w %d1
+|1:		move.w %d1,VGADATA		| character
+|		add.w #0x0101,%d1
+|		dbra %d0,1b
+|		bsr congetchar
+|		bsr conclear
+|		rts
+
+|testattribs:	move.w #4-1,%d2
+|		move.w #0,VGARWADDRLO
+|		clr.w %d1
+|		movea.l #VGADATA,%a0
+|2:		move.w #640/16*480,%d0		| count of words
+|1:		move.w #0x00ff,(%a0)
+|		move.w #0xff00,(%a0)
+|		dbra %d0,1b
+|		bsr congetchar
+|		move.w #0,VGARWADDRLO
+|		dbra %d2,2b
+|		bsr conclear
+|		rts
+
+|setattrib:	move.b (0*4+3,%a1),attributes
+|		rts
+
+
+spitxrx:	movea.l %a1,%a6
+		movea.l (1*4,%a6),%a1		| get source
+		move.w (2*4+2,%a6),%d1		| get the length to read
+		movea.l (3*4,%a6),%a2		| get destination
+		move.w (4*4+2,%a6),%d2		| get the length to write
+		move.b (0*4+3,%a6),SPISELECTS
+		tst.w %d1
+		beq spirx
+
+spitx:		subq.w #1,%d1			| dbra
+1:		move.b (%a1)+,SPIDATA		| get byte to send
+		dbra %d1,1b
+
+spirx:		tst.w %d2
+		beq done
+		subq.w #1,%d2			| dbra
+2:		clr.b %d0
+		move.b #0,SPIDATA
+		nop
+		move.b SPIDATA,(%a2)+
+		dbra %d2,2b
+done:		move.b #0,SPISELECTS
 		rts
 
-setattrib:	move.b (0*4+3,%a1),attributes
-		rts
+anajoytest:	move.b #0x03,SPISELECTS
+		move.b #0x68,SPIDATA
+		nop
+		nop
+		move.b SPIDATA,%d0
+		lsl.w #8,%d0
+		move.b #0,SPIDATA
+		nop
+		nop
+		move.b SPIDATA,%d0
 
-sendspiw:	move.w (0*4+2,%a1),%d0
-		bra sendspiword
-		rts
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr wordtoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr conputstr			| and print it
 
-sendspib:	move.b (0*4+3,%a1),%d0
-		bra sendspibyte
-		rts
-
-sendkeyboard:	move.b (0*4+3,%a1),%d0
-		bsr conputmcuchar
-		rts
-
-showkeyboard:	bsr congetchar
-		move.b %d0,%d1
-		cmp.b #ASC_ESC,%d0
-		beq showkeyboardo
-		bsr conputchar
-		bra showkeyboard
+		move.b #0,SPISELECTS
+		move.w #0xffff,%d0
+1:		dbra %d0,1b
+		bra anajoytest
 		
-showkeyboardo:	rts
+i2ctx:		move.b (0*4+3,%a1),%d1		| i2c address
+	    	movea.l (1*4,%a1),%a0		| start addr
+		move.w (2*4+2,%a1),%d0		| length
+
+		bsr i2cwrite
+		
+		rts
+		
+i2crx:		move.b (0*4+3,%a1),%d1		| i2c address
+	    	movea.l (1*4,%a1),%a0		| start addr
+		move.w (2*4+2,%a1),%d0		| length
+
+		bsr i2cread
+		
+		rts
+
+eepromread:	move.b (0*4+3,%a1),%d1		| i2c address
+		move.l (1*4,%a1),%a0		| local address
+		move.w (2*4+2,%a1),%d0		| length
+		move.w (3*4+2,%a1),%d2		| remote address
+
+		bsr i2ceewriteread
+		
+		rts
+
+eepromwrite:	move.b (0*4+3,%a1),%d1		| i2c address
+		move.l (1*4,%a1),%a0		| local address
+		move.w (2*4+2,%a1),%d3		| length in pages
+		move.w (3*4+2,%a1),%d2		| remote address
+
+1:		bsr i2ceepagewrite
+		add.w #0x20,%d2
+		subq.w #1,%d3
+		bne 1b
+		
+		rts
+		
+|sendkeyboard:	move.b (0*4+3,%a1),%d0
+|		bsr conputmcuchar
+|		rts
+
+|showkeyboard:	bsr congetchar
+|		move.b %d0,%d1
+|		cmp.b #ASC_ESC,%d0
+|		beq showkeyboardo
+|		bsr serputchar
+|		bra showkeyboard
+|showkeyboardo:	rts
 
 sawtest:	move.w #0x3000,%d0
 		move.w #0xff-1,%d1
-1:		bsr sendspiword
+|1:		bsr sendspiword
 		addi.w #0x10,%d0
 		dbra %d1,1b
 		move.w #0xff-1,%d1
-2:		bsr sendspiword
+|2:		bsr sendspiword
 		subi.w #0x10,%d0
 		dbra %d1,2b
 		bra sawtest
@@ -398,17 +525,17 @@ download:	movea.l (0*4,%a1),%a0
 		movea.l (1*4,%a1),%a2
 
 		move.b #1,%d0
-		bsr serputchar
-		bsr serputstr
+		bsr dlputchar
+		bsr dlputstr
 		clr.b %d0
-		bsr serputchar
+		bsr dlputchar
 
-		bsr sergetchar			| ignore response for now
+		bsr dlgetchar			| ignore response for now
 
 		move.w #4-1,%d1
 		clr.l %d2
 1:		lsl.l #8,%d2
-		bsr sergetchar
+		bsr dlgetchar
 		move.b %d0,%d2
 		dbra %d1,1b			| d2 now has length
 
@@ -424,7 +551,13 @@ download:	movea.l (0*4,%a1),%a0
 		movea.l #printbuffer,%a0	| wind a0 back to start
 		bsr conputstr			| and print it
 
-2:		bsr sergetchar
+		move.b #1,%d0			| load the go signal
+		bsr dlputchar			| and send it
+
+2:		tst.l %d2
+		beq 4f
+
+		bsr dlgetchar
 		move.b %d0,(%a2)+		| save the read byte
 
 		tst.b %d2			| look at lowest byte
@@ -433,9 +566,9 @@ download:	movea.l (0*4,%a1),%a0
 		bsr conputchar
 
 3:		subq.l #1,%d2
-		bne 2b
+		bra 2b
 
-		lea (newlinemsg,%pc),%a1	| end with a newline
+4:		lea (newlinemsg,%pc),%a0	| end with a newline
 		bsr conputstr			| and print it
 
 		rts
@@ -445,24 +578,35 @@ download:	movea.l (0*4,%a1),%a0
 
 filesizemsg:	.asciz "File size: "
 
-		.section .text
-		.align 2
+|		.section .text
+|		.align 2
 
-playpcm:	movea.l (0*4,%a1),%a0
-		move.l (1*4,%a1),%d1
-		move.w (2*4+2,%a1),%d0
+playpcm:	move.b (0*4+3,%a1),%d2
+		movea.l (1*4,%a1),%a0
+		move.l (2*4,%a1),%d1
+		move.w (3*4+2,%a1),%d0
 
 		lsl.w #4,%d0
 		or.w #0xb000,%d0
-		bsr sendspiword			| send the volume
+		ror.w #8,%d0
+		move.b %d2,SPISELECTS
+		move.b %d0,SPIDATA
+		ror.w #8,%d0
+		move.b %d0,SPIDATA
+		move.b #0,SPISELECTS
 
 1:		clr.w %d0
 		move.b (%a0)+,%d0
 		lsl.w #4,%d0
 		or.w #0x3000,%d0
-		bsr sendspiword
-
-2:		move.w #0x30,%d0
+		ror.w #8,%d0
+		move.b %d2,SPISELECTS
+		move.b %d0,SPIDATA
+		ror.w #8,%d0
+		move.b %d0,SPIDATA
+		move.b #0,SPISELECTS
+		
+2:		move.w #0x10,%d0
 3:		dbra %d0,3b
 
 		subq.l #1,%d1
@@ -470,14 +614,65 @@ playpcm:	movea.l (0*4,%a1),%a0
 
 		rts
 
-		.section .rodata
-		.align 2
+showscancodes:	btst.b #0,PS2ASTATUS
+		beq showscancodes
+		move.b PS2ASCANCODE,%d0
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr bytetoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr conputstr			| and print it
+		bra showscancodes		
 
-upmsg:		.asciz "Up\r\n"
-downmsg:	.asciz "Down\r\n"
+keyleds:	move.b #0xed,PS2ASCANCODE
+		move.w #0x2000,%d0
+1:		dbra %d0,1b
+		move.b (0*4+3,%a1),PS2ASCANCODE
+		rts
 
-_mcqueen_start:
-_mcqueen_end:
+ledon:		move.w #1,LED
+		rts
+
+ledoff:		move.w #0,LED
+		rts
+
+reset:		reset
+		bra start
+
+dma:		move.l #0,VGARWADDRHI
+		move.l (0*4,%a1),DMASRCHI
+		move.w (1*4+2,%a1),DMALEN
+		move.w #0x0003,DMAFLAGS
+		rts
+
+memtest:	move.l #0,VGARWADDRHI
+		move.l #0,%d0
+1:		bsr setmemtolong
+		bsr cmpmemtolong
+		swap.w %d0
+		move.w %d0,VGADATA
+		move.w %d0,VGADATA
+		swap.w %d0
+		move.w %d0,VGADATA
+		move.w %d0,VGADATA
+		add.l #0xfedcba98,%d0
+		bra 1b		
+		rts
+
+vidmemtest:	move.w #0,%d0
+1:		bsr vsetmemtoword
+		bsr vcmpmemtoword
+		add.w #0xaa55,%d0
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr wordtoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr conputstr			| and print it
+
+		bra 1b		
+		rts
 		
 		.section .bss
 		.align 2

@@ -71,26 +71,28 @@ idewaitfordata: btst.b #IDESTATUSDRQ,IDESTATUS
 
 | read count d0 sectors into a0, saving a0
 
-idellread:	movem.l %a0/%d1,-(%sp)	| save the start of memory
+idellread:	movem.l %a0-%a1/%d1,-(%sp)	| save the start of memory
 		bsr idewaitfordata	| need to wait for data, as reading
-1:		move.w #256-1,%d1	| setup the number words per sector
-2:		move.w IDEDATA,(%a0)+	| read the word from the ide port
+		movea.l #IDEDATA,%a1
+1:		move.w #128-1,%d1	| setup the number words per sector
+2:		move.l (%a1),(%a0)+	| read the word from the ide port
 		dbra %d1,2b		| go back for more
 		sub.w #1,%d0		| decrement sectors remaining
 		bne 1b 			| more? go and get it
-		movem.l (%sp)+,%a0/%d1	| restore the start of memory
+		movem.l (%sp)+,%a0-%a1/%d1	| restore the start of memory
 		rts
 
 | write count d0 sectors from a0, saving a0
 
-idellwrite:	movem.l %a0/%d1,-(%sp)	| save the start of memory
+idellwrite:	movem.l %a0-%a1/%d1,-(%sp)	| save the start of memory
 		bsr idewaitfordata	| need to wait for data, as reading
-1:		move.w #256-1,%d1	| setup the number words per sector
-2:		move.w (%a0)+,IDEDATA	| write the word to the ide data port
+		movea.l #IDEDATA,%a1
+1:		move.w #128-1,%d1	| setup the number words per sector
+2:		move.l (%a0)+,(%a1)	| write the word to the ide data port
 		dbra %d1,2b		| go back for more
 		sub.w #1,%d0		| decrement sectors remaining
 		bne 1b 			| more? go and get it
-		movem.l (%sp)+,%a0/%d1	| restore the start of memory
+		movem.l (%sp)+,%a0-%a1/%d1	| restore the start of memory
 		rts
 
 

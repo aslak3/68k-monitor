@@ -1,9 +1,12 @@
+
 		.include "include/hardware.i"
 
 		.section .text
 		.align 2
 
-start:
+		.global start
+
+start:		movea.l #0x8000,%sp		| move stack to end
 
 | clear the first 1MB
 
@@ -14,16 +17,23 @@ start:
 2:		clr.l (%a0)+			| clear it
 		dbra %d0,2b			| back for more
 		dbra %d1,1b			| next 64KB block
+
+		move.w #1,LED
+
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
 |		bsr timerinit			| prepare the timer
 		bsr vgainit
 		bsr keyboardinit
+|		bsr mouseinit
 
 		move.w #1024-1,%d0
 		movea.l #0x8000,%a0
 1:		move.w #0xff00,(%a0)+
 		dbra %d0,1b
+
+		move.w #0x2000,%sr
+		move.b #0,LED
 
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
 		bsr conputstr			| ...
