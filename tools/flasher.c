@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	int serialfd = openserialport(serialport, B9600, 0);
+	int serialfd = openserialport(serialport, B38400, 0);
 	if (!serialfd)
 	{
 		perror("Unable to open serial port");
@@ -86,9 +86,9 @@ int flashfile(int serialfd, char *filename)
 	
 	printf("File is %ld bytes\n", filesize);
 	
-	if (filesize % 64)
+	if (filesize % 8192)
 	{
-		fprintf(stderr, "File size not divisible by 64B\n");
+		fprintf(stderr, "File size not divisible by 8KB\n");
 		return 1;
 	}
 
@@ -109,7 +109,8 @@ int flashfile(int serialfd, char *filename)
 		return 1;
 	}
 
-	uint16_t pagecount = (uint16_t) filesize / 64;
+	uint16_t pagecount = (uint16_t) (filesize / 8192);
+	printf("pagecount: %d\n", pagecount);
 	pagecount = htons(pagecount);
 	if (mywrite(serialfd, (unsigned char *) &pagecount, sizeof(uint16_t)) != sizeof(uint16_t))
 	{
@@ -137,20 +138,20 @@ int flashfile(int serialfd, char *filename)
 	printf("Writing...\n");
 
 	off_t bytessent = 0;
-	unsigned char transmissionbuffer[64];
+	unsigned char transmissionbuffer[8192];
 
 	while (bytessent < filesize)
 	{
 		int bytesread;
 		unsigned char hashbyte;
 
-		memset(transmissionbuffer, 0, 64);
-		if ((bytesread = myread(filefd, transmissionbuffer, 64)) < 0)
+		memset(transmissionbuffer, 0, sizeof(transmissionbuffer));
+		if ((bytesread = myread(filefd, transmissionbuffer, sizeof(transmissionbuffer))) < 0)
 		{
 			perror("Unable to read from input file");
 			return 1;
 		}
-		mywrite(serialfd, transmissionbuffer, 64);
+		mywrite(serialfd, transmissionbuffer, sizeof(transmissionbuffer));
 
 		if (myread(serialfd, &hashbyte, 1) < 1)
 		{
@@ -197,13 +198,13 @@ int flashfile(int serialfd, char *filename)
 		
 		bytesvalidated++;
 		
-		if (!(bytesvalidated % 64))
+		if (!(bytesvalidated % 8192))
 		{
 			printf("#");
 			fflush(stdout);
 		}
 	}
-	if (bytesvalidated % 64)
+	if (bytesvalidated % 8192)
 		printf("#");
 
 	printf("\n=== No errors ===\n");
