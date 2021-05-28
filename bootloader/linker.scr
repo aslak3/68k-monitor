@@ -1,7 +1,7 @@
 MEMORY
 {
-	RAM(RWX) : ORIGIN = 0x000000, LENGTH = 1024K
-  	ROM(RX) : ORIGIN = 0xf00000, LENGTH = 1024K
+	RAM(RWX) : ORIGIN = 0x00000000, LENGTH = 8M
+  	ROM(RX)  : ORIGIN = 0xff000000, LENGTH = 1024K
 }
 
 _ram_start = ORIGIN(RAM);
@@ -11,9 +11,9 @@ _rom_end = ORIGIN(ROM) + LENGTH(ROM);
 
 SECTIONS
 {
-	.bss 0x000000 : { *(.bss) } > RAM
-	.vectors 0xf00000 : { *(.vectors) } > ROM
-	.text 0xf00400 : { *(.text) } > ROM
+	.bss 0x00000000 : { *(.bss) } > RAM
+	.vectors 0xff000000 : { *(.vectors) } > ROM
+	.text 0xff000400 : { *(.text) } > ROM
 	.rodata : { *(.rodata) } > ROM
-	.realrom 0xf02000 : { *(.realrom) } > ROM
+	.realrom 0xff002000 : { *(.realrom) } > ROM
 }

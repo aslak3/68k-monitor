@@ -111,7 +111,7 @@ asciitoint:	movem.l %a1/%d2,-(%sp)
 | the same. zero will also be set. otherwise d1 will be 1. a0 and a1 are
 | preserved, for repeated calling.
 
-strcmp:		movem %a0-%a1,-(%sp)
+strcmp:		movem.l %a0-%a1,-(%sp)
 1:		move.b (%a0)+,%d0		| read in a1 char
 		beq 5f				| null, still need check a1
 		cmp.b (%a1)+,%d0		| compare
@@ -119,7 +119,7 @@ strcmp:		movem %a0-%a1,-(%sp)
 2:		move.w #1,%d0			| not match
 		bra 4f				| out we go
 3:		clr.w %d0			| match
-4:		movem (%sp)+,%a0-%a1
+4:		movem.l (%sp)+,%a0-%a1
 		rts
 5:		tst.b (%a1)			| check null on right
 		bne 2b				| not the same

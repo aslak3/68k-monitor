@@ -7,9 +7,9 @@ SINGLEBINS = bootloader
 UPPERBINS = $(addsuffix -upper.bin, $(basename $(SINGLEBINS)))
 LOWERBINS = $(addsuffix -lower.bin, $(basename $(SINGLEBINS)))
 
-BINS = $(UPPERBINS) $(LOWERBINS)
+BINS = bootloader.bin $(UPPERBINS) $(LOWERBINS)
 
-BOARD = MAXI000
+BOARD = MIDI020
 
 ifeq ($(BOARD), MINI000)
 TARGET = AT28C256
@@ -17,6 +17,9 @@ PAD = 0xf10000
 else ifeq ($(BOARD), MAXI000)
 TARGET = SST39SF040@PLCC32
 PAD = 0x1000000
+else ifeq ($(BOARD), MIDI020)
+TARGET = SST39SF040@PLCC32
+PAD = 0xff100000
 endif
 
 all: $(BINS)

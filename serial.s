@@ -4,6 +4,11 @@
 		.section .text
 		.align 2
 
+                .global conputchar
+                .global conputstr
+                .global congetchar
+                .global congetstr
+
 		.global serialinit
 		.global serputstr
 		.global sergetstr
@@ -14,7 +19,7 @@
 		.global dlputstr
 
 serialinit:	move.b #0b10000011,LCR16C654+BASEPA
-		move.b #0x0c, DLL16C654+BASEPA	| 9600
+		move.b #0x0c, DLL16C654+BASEPA	| 38.4k
 		move.b #0, DLM16C654+BASEPA
 		move.b #0b00000011, LCR16C654+BASEPA
 		move.b #0b10000011,LCR16C654+BASEPB
@@ -23,6 +28,7 @@ serialinit:	move.b #0b10000011,LCR16C654+BASEPA
 		move.b #0b00000011, LCR16C654+BASEPB
 		rts
 
+conputstr:
 serputstr:	move.w %d0,-(%sp)
 1:		move.b (%a0)+,%d0		| get the byte to put
 		beq 2f				| end of message, done
@@ -33,6 +39,7 @@ serputstr:	move.w %d0,-(%sp)
 
 | put the char in d0
 
+conputchar:
 serputchar:	btst.b #5,LSR16C654+BASEPA	| busy sending last char?
 		beq serputchar			| yes, look again
 		move.b %d0,THR16C654+BASEPA	| put that byte
@@ -40,6 +47,7 @@ serputchar:	btst.b #5,LSR16C654+BASEPA	| busy sending last char?
 
 | get a str in a0
 
+congetstr:
 sergetstr:	movem.l %d0-%d1/%a0,-(%sp)	
 		clr.w %d1			| set the length to 0
 getstrloop:	bsr sergetchar			| get a char in a
@@ -77,6 +85,7 @@ getstrbs:	tst.w %d1			| see if the char count is 0
 
 | get a char in d0
 
+congetchar:
 sergetchar:	btst.b #0,LSR16C654+BASEPA	| chars?
 		beq sergetchar			| no chars yet
 		move.b RHR16C654+BASEPA,%d0	| get it in d0

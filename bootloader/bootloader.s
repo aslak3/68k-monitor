@@ -6,7 +6,7 @@
 
 		.section .vectors, #alloc
 
-resetsp:	.long 0x0ffff0			| the initial sp
+resetsp:	.long 0x00008000		| the initial sp
 resetpc:	.long _start			| the initial pc
 
 		.section .text
@@ -86,6 +86,8 @@ pagestart:	movea.l #eightkbytes,%a0	| ram copy of page
 		move.w #0x3030,(%a1)		| finally set the sector
 
 		move.b #1,LED
+		move.w #0xff00,%d0		| delay, maybe 20mS?
+1:		dbra %d0,1b
 		move.w #0xff00,%d0		| delay, maybe 20mS?
 1:		dbra %d0,1b
 		move.b #0,LED

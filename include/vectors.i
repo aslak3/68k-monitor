@@ -5,6 +5,8 @@
 		.equ VILLEGALINSTRUCTION,	16
 		.equ VZERODIVIDE,		20
 		.equ VBADPRIV,			32
+		.equ VALINEEMU,			40
+		.equ VFLINEEMU,			44
 		.equ VBADVECTOR,		60
 		.equ VSPURIOUS,			96
 		.equ VL1AUTOVECTOR,		100

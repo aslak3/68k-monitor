@@ -1,4 +1,3 @@
-
 		.include "include/hardware.i"
 
 		.section .text
@@ -6,11 +5,11 @@
 
 		.global start
 
-start:		movea.l #0x8000,%sp		| move stack to end
+start:
 
 | clear the first 1MB
 
-		movea.l #0,%a0			| start at 0
+		movea.l #0x00000000,%a0		| start at 0
 		move.w #(((1024*1024)/4)/65536)-1,%d1
 						| number of 64KB long blocks
 1:		move.w #65536-1,%d0		| 64KB of long words
@@ -23,12 +22,12 @@ start:		movea.l #0x8000,%sp		| move stack to end
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
 |		bsr timerinit			| prepare the timer
-		bsr vgainit
-		bsr keyboardinit
+|		bsr vgainit
+|		bsr keyboardinit
 |		bsr mouseinit
 
 		move.w #1024-1,%d0
-		movea.l #0x8000,%a0
+		movea.l #0x00008000,%a0
 1:		move.w #0xff00,(%a0)+
 		dbra %d0,1b
 
