@@ -90,6 +90,7 @@ vgaseek:	movem.l %d0-%d1/%a0,-(%sp)
 		lsl.w #1,%d0			| attribute byte factoring
 		add.w %d0,%d1			| and add the column
 		move.w %d1,VGARWADDRLO	| one hit!
+		move.w #0,VGARWADDRHI
 		movem.l (%sp)+,%d0-%d1/%a0
 		rts
 

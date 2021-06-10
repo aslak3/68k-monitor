@@ -7,6 +7,8 @@
 		.global printbuffer
 		.global clear
 		.global testtextmode
+		.global piano
+		.global pianoend
 
 		.section .rodata
 		.align 2
@@ -32,15 +34,15 @@ commandarray:	checkcommand "readbyte", 3
 |		nocheckcommand "stopvgm"
 		nocheckcommand "showticks"
 		checkcommand "clear", 3
-		checkcommand "testvread", 3, 2, 2
-		checkcommand "testvwrite", 3, 2, 2
+		checkcommand "testvread", 3, 3, 3
+		checkcommand "testvwrite", 3, 3, 3
 		checkcommand "checksum", 3, 2
 		checkcommand "memcopy", 3, 2, 3
 		checkcommand "patternfillw" 3, 2
 		checkcommand "patternfillb" 3, 2
 		checkcommand "memfill", 3, 2, 2
 |		checkcommand "showbmp", 3
-|		nocheckcommand "testtextmode"
+		nocheckcommand "testtextmode"
 |		nocheckcommand "testattribs"
 |		checkcommand "setattrib", 1
 		checkcommand "spitxrx", 1, 3, 2, 3, 2
@@ -63,6 +65,9 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "i2crx", 1, 3, 2
 		checkcommand "eepromread", 1, 3, 2, 2
 		checkcommand "eepromwrite", 1, 3, 2, 2
+		checkcommand "spimplay", 3, 3, 2, 2
+		checkcommand "dmaplay", 3, 3, 2
+		checkcommand "playpiano", 2
 		endcommand		
 
 		.section .text
@@ -316,24 +321,26 @@ clear:		move.l (0*4,%a1),%d2
 		rts
 
 testvread:	movea.l (0*4,%a1),%a0		| get address to write in
-		move.w (1*4+2,%a1),%d1		| get the start
-		move.w (2*4+2,%a1),%d0		| and the count
-		subq.w #1,%d0			| used in dbra
-		move.w %d1,VGARWADDRLO		| one hit
+		move.l (1*4,%a1),%d1		| get the start
+		move.l (2*4,%a1),%d0		| and the count in words
+		move.l %d1,VGARWADDRHI		| one hit
 		movea.l #VGADATA,%a1
 		move.w (%a1),%d1		| dumamy read
 1:		move.w (%a1),(%a0)+
-		dbra %d0,1b
+		subq.l #1,%d0
+		bne 1b
 		rts
 
 testvwrite:	movea.l (0*4,%a1),%a0		| get address to read from
-		move.w (1*4+2,%a1),%d1		| get the start
-		move.w (2*4+2,%a1),%d0		| and the count
-		subq.w #1,%d0			| used in dbra
+		move.l (1*4,%a1),%d1		| get the start
+		move.l (2*4,%a1),%d0		| and the count in words
+		move.w #0,VGARWADDRHI
 		move.w %d1,VGARWADDRLO		| one hit
 		movea.l #VGADATA,%a1
 1:		move.w (%a0)+,(%a1)
-		dbra %d0,1b
+		subq.w #1,%d0			| used in dbra
+		bne 1b
+
 		rts
 
 memcopy:	movea.l (0*4,%a1),%a0		| get address to read from
@@ -386,15 +393,15 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 |		bsr bmpshow			| display and wait
 |		rts		
 
-|testtextmode:	move.w #80*60,%d0
-|		bsr conclear
-|		clr.w %d1
-|1:		move.w %d1,VGADATA		| character
-|		add.w #0x0101,%d1
-|		dbra %d0,1b
-|		bsr congetchar
-|		bsr conclear
-|		rts
+testtextmode:	move.w #80*60,%d0
+		bsr conclear
+		clr.w %d1
+1:		move.w %d1,VGADATA		| character
+		add.w #0x0101,%d1
+		dbra %d0,1b
+		bsr congetchar
+		bsr conclear
+		rts
 
 |testattribs:	move.w #4-1,%d2
 |		move.w #0,VGARWADDRLO
@@ -673,7 +680,48 @@ vidmemtest:	move.w #0,%d0
 
 		bra 1b		
 		rts
+
+spimplay:	movea.l #SPIMSTATUS+1,%a2
+		movea.l #SPIMDATA,%a3
+
+		movea.l (0*4,%a1),%a0		| address
+		move.l (1*4,%a1),%d1		| length
+		move.w (2*4+2,%a1),SPIMDELAY	| delay
+
+		move.w (3*4+2,%a1),SPIMVOL	| set volume
+
+1:		btst.l #0,(%a2)
+		bne 1b
+
+spimplaystart:	tst.l %d1
+		beq 2f
+
+1:		btst.b #0,(%a2)
+		bne 1b
+
+		move.w (%a0)+,(%a3)
 		
+		subq.l #1,%d1
+		bra spimplaystart
+
+2:		rts
+
+dmaplay:	move.l (0*4,%a1),DMAMADDRHI	| address
+ 		move.l (1*4,%a1),DMAMLENHI	| length
+		move.w (2*4+2,%a1),SPIMDELAY	| delay
+		rts
+
+playpiano:	move.l #0x8000,DMAMADDRHI
+		move.l #pianoend-piano,DMAMLENHI
+		move.w (0*4+2,%a1),SPIMDELAY
+		rts		
+
+		.section .rodata
+		.align 2
+
+piano:		.word 0xf0f0
+		.incbin "piano.raw"
+pianoend:
 		.section .bss
 		.align 2
 

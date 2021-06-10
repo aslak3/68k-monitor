@@ -35,6 +35,13 @@ start:		movea.l #0x8000,%sp		| move stack to end
 		move.w #0x2000,%sr
 		move.b #0,LED
 
+		move.l #piano,%a0
+		move.l #0x8000,VGARWADDRHI
+		movea.l #VGADATA,%a1
+1:		move.w (%a0)+,(%a1)
+		cmpa.l #pianoend,%a0
+		bne 1b
+
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
 		bsr conputstr			| ...
 

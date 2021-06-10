@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	int serialfd = openserialport(serialport, B9600, 0);
+	int serialfd = openserialport(serialport, B38400, 0);
 	if (!serialfd)
 	{
 		perror("Unable to open serial port");
