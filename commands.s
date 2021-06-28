@@ -65,9 +65,12 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "i2crx", 1, 3, 2
 		checkcommand "eepromread", 1, 3, 2, 2
 		checkcommand "eepromwrite", 1, 3, 2, 2
-		checkcommand "spimplay", 3, 3, 2, 2
+|		checkcommand "spimplay", 3, 3, 2, 2
 		checkcommand "dmaplay", 3, 3, 2
-		checkcommand "playpiano", 2
+		checkcommand "playpiano", 2, 2
+		checkcommand "playscale", 3
+		checkcommand "spimdata", 2
+		checkcommand "spimvol", 2
 		endcommand		
 
 		.section .text
@@ -681,30 +684,30 @@ vidmemtest:	move.w #0,%d0
 		bra 1b		
 		rts
 
-spimplay:	movea.l #SPIMSTATUS+1,%a2
-		movea.l #SPIMDATA,%a3
-
-		movea.l (0*4,%a1),%a0		| address
-		move.l (1*4,%a1),%d1		| length
-		move.w (2*4+2,%a1),SPIMDELAY	| delay
-
-		move.w (3*4+2,%a1),SPIMVOL	| set volume
-
-1:		btst.l #0,(%a2)
-		bne 1b
-
-spimplaystart:	tst.l %d1
-		beq 2f
-
-1:		btst.b #0,(%a2)
-		bne 1b
-
-		move.w (%a0)+,(%a3)
-		
-		subq.l #1,%d1
-		bra spimplaystart
-
-2:		rts
+|spimplay:	movea.l #SPIMSTATUS+1,%a2
+|		movea.l #SPIMDATA,%a3
+|
+|		movea.l (0*4,%a1),%a0		| address
+|		move.l (1*4,%a1),%d1		| length
+|		move.w (2*4+2,%a1),SPIMDELAY	| delay
+|
+|		move.w (3*4+2,%a1),SPIMVOL	| set volume
+|
+|1:		btst.l #0,(%a2)
+|		bne 1b
+|
+|spimplaystart:	tst.l %d1
+|		beq 2f
+|
+|1:		btst.b #0,(%a2)
+|		bne 1b
+|
+|		move.w (%a0)+,(%a3)
+|		
+|		subq.l #1,%d1
+|		bra spimplaystart
+|
+|2:		rts
 
 dmaplay:	move.l (0*4,%a1),DMAMADDRHI	| address
  		move.l (1*4,%a1),DMAMLENHI	| length
@@ -713,13 +716,65 @@ dmaplay:	move.l (0*4,%a1),DMAMADDRHI	| address
 
 playpiano:	move.l #0x8000,DMAMADDRHI
 		move.l #pianoend-piano,DMAMLENHI
-		move.w (0*4+2,%a1),SPIMDELAY
+		move.w (0*4+2,%a1),DMAMVOL
+		move.w (1*4+2,%a1),SPIMDELAY
 		rts		
+
+playscale:	movea.l #notetable,%a0
+		move.w #0xf0f0,%d1
+1:		move.l (0*4,%a1),%d0
+		move.l #0x8000,DMAMADDRHI
+		move.w %d1,DMAMVOL
+		sub.w #0x1010,%d1
+		move.l #pianoend-piano,DMAMLENHI
+		move.w (%a0)+,SPIMDELAY
+2:		subq.l #1,%d0
+		bne 2b
+		tst.w (%a0)
+		bne 1b
+		rts
+
+spimdata:	move.w #1,SPIMDELAY
+		move.w (0*4+2,%a1),SPIMDATA
+		rts
+spimvol:	move.w #1,SPIMDELAY
+		move.w (0*4+2,%a1),SPIMVOL
+		rts
+
+
 
 		.section .rodata
 		.align 2
 
-piano:		.word 0xf0f0
+notetable:
+		.word 1133
+		.word 1070
+		.word 1010
+		.word 953
+		.word 899
+		.word 849
+		.word 801
+		.word 756
+		.word 714
+		.word 674
+		.word 636
+		.word 600
+		.word 566
+		.word 535
+		.word 505
+		.word 476
+		.word 449
+		.word 424
+		.word 400
+		.word 378
+		.word 357
+		.word 337
+		.word 318
+		.word 300
+		.word 283
+		.word 0
+
+piano:		.word 0
 		.incbin "piano.raw"
 pianoend:
 		.section .bss
