@@ -10,8 +10,8 @@
 memtest:	add.l #0xfedcba98,%d0
 
 setmemtolong:	move.l %d0,%d7
-		movea.l #0x80000000,%a0		| start at 64KB
-		move.w #(((1024*1024)/4)/1024)-1,%d2
+		movea.l #0x00000000,%a0		| start at 64KB
+		move.w #(((8*1024*1024)/4)/1024)-1,%d2
 						| number of 64K long blocks
 1:		move.w #1024-1,%d1		| 64K of long words
 2:		move.l %d0,(%a0)+		| set to d1 value
@@ -22,8 +22,8 @@ setmemtolong:	move.l %d0,%d7
 		move.b #1,LED
 
 cmpmemtolong:	move.l %d0,%d7
-		movea.l #0x80000000,%a0		| start at 0
-		move.w #(((1024*1024)/4)/1024)-1,%d2
+		movea.l #0x00000000,%a0		| start at 0
+		move.w #(((8*1024*1024)/4)/1024)-1,%d2
 						| number of 1K long blocks
 1:		move.w #1024-1,%d1		| 64K of long words
 2:		move.l (%a0)+,%d3		| see if match
@@ -37,7 +37,8 @@ cmpmemtolong:	move.l %d0,%d7
 
 		bra memtest
 
-error:		move.b #0xff,LED
+error:		move.b #0x80,BUZZER
+		move.b #0xff,LED
 		move.w #0x0ff0,%d0
 1:		dbra %d0,1b
 		move.b #0,LED

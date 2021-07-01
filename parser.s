@@ -1,8 +1,8 @@
-		.align 2
 
 		.include "include/ascii.i"
 
 		.section .text
+		.align 2
 
 		.global parser
 		.global checktypes

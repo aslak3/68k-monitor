@@ -44,8 +44,8 @@ commandarray:	checkcommand "readbyte", 3
 |		nocheckcommand "testattribs"
 |		checkcommand "setattrib", 1
 |		checkcommand "spitxrx", 1, 3, 2, 3, 2
-|		checkcommand "sendkeyboard", 1
-|		nocheckcommand "showkeyboard"
+		checkcommand "sendkeyboard", 1
+		nocheckcommand "showkeyboard"
 |		nocheckcommand "sawtest"
 		checkcommand "download", 0x80, 3
 |		checkcommand "playpcm", 1, 3, 3, 1
@@ -61,7 +61,7 @@ commandarray:	checkcommand "readbyte", 3
 |		nocheckcommand "anajoytest"
 		checkcommand "i2ctx", 1, 3, 2
 		checkcommand "i2crx", 1, 3, 2
-		checkcommand "i2splay", 3, 2
+|		checkcommand "i2splay", 3, 2
 		checkcommand "eepromread", 1, 3, 2, 2
 		checkcommand "eepromwrite", 1, 3, 2, 2
 		nocheckcommand "floattest"
@@ -500,31 +500,30 @@ eepromwrite:	move.b (0*4+3,%a1),%d1		| i2c address
 		
 		rts
 
-i2splay:	movea.l (0*4,%a1),%a0		| start addr
-		move.w (1*4+2,%a1),%d0		| length
-
-i2splayloop:	move.b (%a0)+,I2SDATA		| trigger write
-
-1:		btst.b #0,I2SSTATUS		| get status
-		bne 1b				| loop until not busy
-   
-                dbra %d0,i2splayloop		| more?
-		bra i2splay
-   
-		rts
-
-		
-|sendkeyboard:	move.b (0*4+3,%a1),%d0
-|		bsr conputmcuchar
+|i2splay:	movea.l (0*4,%a1),%a0		| start addr
+|		move.w (1*4+2,%a1),%d0		| length
+|
+|i2splayloop:	move.b (%a0)+,I2SDATA		| trigger write
+|
+|1:		btst.b #0,I2SSTATUS		| get status
+|		bne 1b				| loop until not busy
+|   
+|                dbra %d0,i2splayloop		| more?
+|		bra i2splay
+|   
 |		rts
 
-|showkeyboard:	bsr congetchar
-|		move.b %d0,%d1
-|		cmp.b #ASC_ESC,%d0
-|		beq showkeyboardo
-|		bsr serputchar
-|		bra showkeyboard
-|showkeyboardo:	rts
+sendkeyboard:	move.b (0*4+3,%a1),%d0
+		bsr conputmcuchar
+		rts
+
+showkeyboard:	bsr testcongetchar
+		move.b %d0,%d1
+		cmp.b #ASC_ESC,%d0
+		beq showkeyboardo
+		bsr serputchar
+		bra showkeyboard
+showkeyboardo:	rts
 
 |sawtest:	move.w #0x3000,%d0
 |		move.w #0xff-1,%d1
@@ -648,6 +647,7 @@ filesizemsg:	.asciz "File size: "
 |		rts
 
 ledon:		move.b #1,LED
+
 		rts
 
 ledoff:		move.b #0,LED

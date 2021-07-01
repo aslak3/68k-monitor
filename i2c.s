@@ -6,7 +6,7 @@
 		.global i2ceewriteread
 		.global i2ceepagewrite
 
-		.section .rodata
+		.section .text
 		.align 2
 
 | write: a0 = address, d0 = byte count, d1 = slave address

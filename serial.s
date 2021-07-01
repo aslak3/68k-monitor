@@ -19,13 +19,14 @@
 		.global dlputstr
 
 serialinit:	move.b #0b10000011,LCR16C654+BASEPA
-		move.b #0x0c, DLL16C654+BASEPA	| 38.4k
-		move.b #0, DLM16C654+BASEPA
-		move.b #0b00000011, LCR16C654+BASEPA
+		move.b #0x0c,DLL16C654+BASEPA	| 38.4k
+		move.b #0,DLM16C654+BASEPA
+		move.b #0b00000011,LCR16C654+BASEPA
+
 		move.b #0b10000011,LCR16C654+BASEPB
-		move.b #0x0c, DLL16C654+BASEPB	| 9600
-		move.b #0, DLM16C654+BASEPB
-		move.b #0b00000011, LCR16C654+BASEPB
+		move.b #0x0c,DLL16C654+BASEPB	| 38.4k
+		move.b #0,DLM16C654+BASEPB
+		move.b #0b00000011,LCR16C654+BASEPB
 		rts
 
 conputstr:

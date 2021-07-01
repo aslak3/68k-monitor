@@ -7,14 +7,14 @@
 
 		.global keyboardinit
 		.global conputmcuchar
-		.global congetstr
-		.global congetchar
+		.global testcongetstr
+		.global testcongetchar
 
 
 keyboardinit:	move.b #0b10000011,LCR16C654+BASEPD
-		move.b #0x30, DLL16C654+BASEPD  | 9600
-		move.b #0, DLM16C654+BASEPD
-		move.b #0b00000011, LCR16C654+BASEPD
+		move.b #0x30,DLL16C654+BASEPD  | 9600
+		move.b #0,DLM16C654+BASEPD
+		move.b #0b00000011,LCR16C654+BASEPD
 		move.b #6,%d0
 		bsr conputmcuchar
 		clr.w leftshifton
@@ -32,9 +32,9 @@ conputmcuchar:	btst.b #5,LSR16C654+BASEPD	| busy sending last char?
 
 | get a str in a0
 
-congetstr:	movem.l %d0-%d1/%a0,-(%sp)	
+testcongetstr:	movem.l %d0-%d1/%a0,-(%sp)	
 		clr.w %d1			| set the length to 0
-getstrloop:	bsr congetchar			| get a char in a
+getstrloop:	bsr testcongetchar		| get a char in a
 		cmp.b #ASC_CR,%d0		| cr?
 		beq getstrout			| if it is, then out
 		cmp.b #ASC_LF,%d0		| lf?
@@ -69,14 +69,13 @@ getstrbs:	tst.w %d1			| see if the char count is 0
 
 | get a char in d0 - guaranteed to have high byte 0
 
-congetchar:	btst.b #0,LSR16C654+BASEPD	| chars?
-		beq congetchar			| no chars yet
+testcongetchar:	btst.b #0,LSR16C654+BASEPD	| chars?
+		beq testcongetchar		| no chars yet
 		clr.w %d0			| clear the top byte as well
 		move.b RHR16C654+BASEPD,%d0	| get it in d0
-		move.b %d0,SPIDATA
 		bsr mapscancode			| translate to ascii
 		tst.b %d0			| printable?
-		beq congetchar			| back for more
+		beq testcongetchar		| back for more
 		rts
 
 | translate scancode in a register, returning the ascii a - if no char is

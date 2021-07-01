@@ -1,8 +1,8 @@
-		.align 2
 
 		.include "include/hardware.i"
 
 		.section .text
+		.align 2
 
 		.global sendspibyte
 

@@ -17,13 +17,13 @@ start:
 		dbra %d0,2b			| back for more
 		dbra %d1,1b			| next 64KB block
 
-		move.w #1,LED
+		move.b #1,LED
 
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
 |		bsr timerinit			| prepare the timer
 |		bsr vgainit
-|		bsr keyboardinit
+		bsr keyboardinit
 |		bsr mouseinit
 
 		move.w #1024-1,%d0

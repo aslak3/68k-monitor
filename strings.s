@@ -1,6 +1,5 @@
-		.align 2
-
 		.section .text
+		.align 2
 
 		.global bytetoascii
 		.global wordtoascii
