@@ -21,7 +21,7 @@ start:
 
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
-|		bsr timerinit			| prepare the timer
+		bsr timerinit			| prepare the timer
 |		bsr vgainit
 		bsr keyboardinit
 |		bsr mouseinit

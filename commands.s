@@ -30,7 +30,7 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "diskwrite", 3, 2, 1
 |		checkcommand "playvgm", 3
 |		nocheckcommand "stopvgm"
-|		nocheckcommand "showticks"
+		nocheckcommand "showticks"
 |		checkcommand "clear", 3
 |		checkcommand "testvread", 3, 2, 2
 |		checkcommand "testvwrite", 3, 2, 2
@@ -49,8 +49,8 @@ commandarray:	checkcommand "readbyte", 3
 |		nocheckcommand "sawtest"
 		checkcommand "download", 0x80, 3
 |		checkcommand "playpcm", 1, 3, 3, 1
-|		nocheckcommand "showscancodes"
-|		checkcommand "keyleds", 1
+		nocheckcommand "showscancodes"
+		checkcommand "keyleds", 1
 		nocheckcommand "ledon"
 		nocheckcommand "ledoff"
 		nocheckcommand "reset"
@@ -65,6 +65,18 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "eepromread", 1, 3, 2, 2
 		checkcommand "eepromwrite", 1, 3, 2, 2
 		nocheckcommand "floattest"
+		nocheckcommand "initnic"
+		nocheckcommand "transmit"
+		checkcommand "readmem", 2, 3, 2
+		checkcommand "writemem", 2, 3, 2
+		nocheckcommand "readmemw"
+|		nocheckcommand "oldinitnic"
+|		checkcommand "oldtransmit", 3, 2
+		nocheckcommand "nicmain"
+		checkcommand "print", 3, 2
+		nocheckcommand "mandlebrot"
+		nocheckcommand "clearscreen"
+		nocheckcommand "drawstuff"
 		endcommand
 
 		.section .text
@@ -297,21 +309,14 @@ diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
 |stopvgm:	bsr vgmstop			| simple wrapper
 |		rts
 
-|showticks:	move.l timerticks,%d0
-|		movea.l #printbuffer,%a0	| set the output buffer
-|		bsr longtoascii			| convert into a0
-|		lea (newlinemsg,%pc),%a1	| need a newline
-|		bsr strconcat			| add it
-|		movea.l #printbuffer,%a0	| wind buffer back
-|		bsr conputstr			| and print it
-|		move.l vblticks,%d0
-|		movea.l #printbuffer,%a0	| set the output buffer
-|		bsr longtoascii			| convert into a0
-|		lea (newlinemsg,%pc),%a1	| need a newline
-|		bsr strconcat			| add it
-|		movea.l #printbuffer,%a0	| wind buffer back
-|		bsr conputstr			| and print it
-|		rts
+showticks:	move.l timerticks,%d0
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr longtoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr conputstr			| and print it
+		rts
 
 |clear:		move.l (0*4,%a1),%d2
 |		bsr conclear
@@ -629,22 +634,22 @@ filesizemsg:	.asciz "File size: "
 |
 |		rts
 
-|showscancodes:	btst.b #0,PS2ASTATUS
-|		beq showscancodes
-|		move.b PS2ASCANCODE,%d0
-|		movea.l #printbuffer,%a0	| set the output buffer
-|		bsr bytetoascii			| convert into a0
-|		lea (newlinemsg,%pc),%a1	| need a newline
-|		bsr strconcat			| add it
-|		movea.l #printbuffer,%a0	| wind buffer back
-|		bsr conputstr			| and print it
-|		bra showscancodes		
+showscancodes:	btst.b #0,PS2ASTATUS
+		beq showscancodes
+		move.b PS2ASCANCODE,%d0
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr bytetoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr conputstr			| and print it
+		bra showscancodes		
 
-|keyleds:	move.b #0xed,PS2ASCANCODE
-|		move.w #0x2000,%d0
-|1:		dbra %d0,1b
-|		move.b (0*4+3,%a1),PS2ASCANCODE
-|		rts
+keyleds:	move.b #0xed,PS2ASCANCODE
+		move.w #0x8000,%d0
+1:		dbra %d0,1b
+		move.b (0*4+3,%a1),PS2ASCANCODE
+		rts
 
 ledon:		move.b #1,LED
 
@@ -682,6 +687,49 @@ floattest:	fmove.d #0f2.0,%fp0
 		move.l (0*4+0,%a1),%a0
 		fmove.d %fp0,(%a0)
 
+		rts
+
+initnic:	bsr ne2k_setup
+		rts
+
+transmit:	bsr transmit_wrapper
+		rts
+
+readmem:	move.l (2*4,%a1),-(%sp)
+		move.l (1*4,%a1),-(%sp)
+		move.l (0*4,%a1),-(%sp)
+		bsr ne2k_readmem
+		lea.l 12(%sp),%sp
+		rts
+
+writemem:	move.l (2*4,%a1),-(%sp)
+		move.l (1*4,%a1),-(%sp)
+		move.l (0*4,%a1),-(%sp)
+		bsr ne2k_writemem
+		lea.l 12(%sp),%sp
+		rts
+
+readmemw:	bsr readmem_wrapper
+		rts 
+
+|oldinitnic:	bsr rtlinit
+|		rts
+|
+|oldtransmit:	move.l (0*4+0,%a1),%a0
+|		move.l (1*4+2,%a1),%d0
+|		bsr sendpacket
+|		rts
+
+nicmain:	bsr main
+		rts
+
+print:		move.l (1*4,%a1),-(%sp)			| length.w
+		move.l (0*4,%a1),-(%sp)			| data.l
+		bsr print_buffer
+		lea.l 8(%sp),%sp
+		rts
+
+mandlebrot:	bsr mandlebrotc
 		rts
 		
 		.section .bss

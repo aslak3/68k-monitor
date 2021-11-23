@@ -1,6 +1,7 @@
 		.global wordswap
 		.global longswap
 		.global labelprintlong
+		.global delay
 
 		.section .text
 		.align 2
@@ -27,4 +28,11 @@ labelprintlong:	movem.l %a0,-(%sp)
 		movea.l #printbuffer,%a0
 		bsr conputstr
 		movem.l (%sp)+,%a0
+		rts
+
+| loop round a dbra %d0.w times
+
+delay:		move.w #0xffff,%d1
+1:		dbra %d1,1b
+		dbra %d0,delay
 		rts

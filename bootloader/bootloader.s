@@ -43,7 +43,9 @@ _start:		move.b #0x00,SYSCONF		| write protect eeprom
 
 		jmp (%a0)
 
-begin:		|lea resetmsg(%pc),%a0		| grab the greeting in a0
+begin:		move.b #0x00,BUZZER
+
+		|lea resetmsg(%pc),%a0		| grab the greeting in a0
 		movea.l #resetmsg,%a0
 		bsr putstring			| send it
 
@@ -53,7 +55,6 @@ begin:		|lea resetmsg(%pc),%a0		| grab the greeting in a0
 		beq flasher			| yes, so do the flashing
 
 normalstart:	move.b #0x00,LED
-		move.b #0x00,BUZZER
 		jmp realrom			| jump after bootloader code
 
 flasher:	bsr getchar			| highbyte of page count

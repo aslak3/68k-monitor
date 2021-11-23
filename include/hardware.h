@@ -8,66 +8,57 @@
 #define READ_WORD(address) (*(uint16_t volatile *) (address))
 #define READ_LONG(address) (*(uint32_t volatile *) (address))
 
-/* alpha */
+/* Core */
 
-#define ALPHABASE 0x100000
-#define SYSCONF ALPHABASE+0
-#define LED ALPHABASE+2
-#define BUZZER ALPHABASE+4
+#define COREBASE 0x84000000
+#define LED COREBASE+0x0
+#define BUZZER COREBASE+0x1
+#define SYSCONF COREBASE+0x2
+#define PS2ASTATUS COREBASE+0x3
+#define PS2ASCANCODE COREBASE+0x4
+#define PS2BSTATUS COREBASE+0x5
+#define PS2BSCANCODE COREBASE+0x6
+#define I2CADDRESS COREBASE+0x7
+#define I2CWRITE COREBASE+0x8
+#define I2CREAD COREBASE+0x9
+#define I2CCONTROL COREBASE+0xa
+#define I2CSTATUS I2CCONTROL
+#define RTCINTCONTROL COREBASE+0xb
 
-#define BASE16C654 0x102000
-#define ROMB _rom_start
-
-/* beta */
-
-#define BETABASE 0x101000
-#define VGARWADDRHI BETABASE+0
-#define VGARWADDRLO BETABASE+2
-#define VGADATA BETABASE+4
-#define VGADATAHI BETABASE+4
-#define VGADATALO BETABASE+5
-#define VGAMODEDEFATTR BETABASE+6
-#define VGAOFFSETADDR BETABASE+8
-#define PS2ASTATUS BETABASE+0xa
-#define PS2ASCANCODE BETABASE+0xb
-#define SPISELECTS BETABASE+0xe
-#define SPIDATA BETABASE+0x10
-#define TIMERCOUNT BETABASE+0x12
-
-/* regsiters within one port */
+/* regsiters within one UART port */
 
 #define RHR16C654 0
 #define THR16C654 0
-#define IER16C654 2
-#define ISR16C654 4
-#define FCR16C654 4
-#define LCR16C654 6
-#define MCR16C654 8
-#define LSR16C654 10
-#define MSR16C654 12
-#define SPR16C654 14
+#define IER16C654 1
+#define ISR16C654 2
+#define FCR16C654 2
+#define LCR16C654 3
+#define MCR16C654 4
+#define LSR16C654 5
+#define MSR16C654 6
+#define SPR16C654 7
 #define DLL16C654 0
-#define DLM16C654 2
-#define EFR16C654 4
-#define XON116C654 8
-#define XON216C654 10
-#define XOFF116C654 12
-#define XOFF216C654 14
+#define DLM16C654 1
+#define EFR16C654 2
+#define XON116C654 4
+#define XON216C654 5
+#define XOFF116C654 6
+#define XOFF216C654 7
 
 /* the base address of each port */
 
 #define BASEPA16C654 BASE16C654+0
 #define BASEPA BASEPA16C654
-#define BASEPB16C654 BASE16C654+16
+#define BASEPB16C654 BASE16C654+8
 #define BASEPB BASEPB16C654
-#define BASEPC16C654 BASE16C654+32
+#define BASEPC16C654 BASE16C654+16
 #define BASEPC BASEPC16C654
-#define BASEPD16C654 BASE16C654+48
+#define BASEPD16C654 BASE16C654+24
 #define BASEPD BASEPD16C654
 
 /* ide registers */
 
-#define IDEBASE 0x103000
+#define IDEBASE 0x84020000
 #define IDEDATA IDEBASE+0
 #define IDEERR IDEBASE+4
 #define IDEFEATURES IDEBASE+4
@@ -105,3 +96,48 @@
 /* misc ide */
 
 #define IDESECTORSIZE 512
+
+/* 68230 stuff */
+
+#define PITBASE 0x80010000
+
+#define PITPGCR PITBASE+0x00		/* Port General Control Register */
+#define PITPSRR PITBASE+0x01		/* Port Service Request Register */
+#define PITPADDR PITBASE+0x02		/* Port A Data Direction Register */
+#define PITPBDDR PITBASE+0x03		/* Port B Data Direction Register */
+
+#define PITPACR PITBASE+0x06		/* Port A Control Register */
+#define PITPBCR PITBASE+0x07		/* Port B Control Register */
+
+#define PITPADR PITBASE+0x08		/* Port A Data Register */
+#define PITPBDR PITBASE+0x09		/* Port B Data Register */
+
+#define PITPAAR PITBASE+0x0a		/* Port A Data Register */
+#define PITPBAR PITBASE+0x0b		/* Port B Data Register */
+
+#define PITPSR PITBASE+0x0d			/* Port Status Regsiter */
+
+#define PRTSTATUSERROR 0
+#define PRTSTATUSNOTSELECT 1
+#define PRTSTATUSNOTBUSY 2
+#define PRTSTATUSPAPEROUT 3
+#define PRTSTATUSNOTSELECTPRINTER 4
+#define PRTSTATUSNOTLINEFEED 5
+#define PRTSTATUSNOTPRTRESET 6
+
+/* video */
+
+#define VIDBASE 0x80200000
+#define VIDX0 VIDBASE+0x0
+#define VIDY0 VIDBASE+0x2
+#define VIDX1 VIDBASE+0x4
+#define VIDY1 VIDBASE+0x6
+#define VIDPENCOLOUR VIDBASE+0x8
+#define VIDLED VIDBASE+0xfc
+#define VIDCOMMAND VIDBASE+0xfe
+#define VIDSTATUS VIDCOMMAND
+
+#define VIDCOMMCLEAR 0x0
+#define VIDCOMMHOLLOWBOX 0x1
+#define VIDCOMMFILLEDBOX 0x2
+#define VIDCOMMDOT 0x3

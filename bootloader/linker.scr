@@ -11,7 +11,7 @@ _rom_end = ORIGIN(ROM) + LENGTH(ROM);
 
 SECTIONS
 {
-	.bss 0x00000000 : { *(.bss) } > RAM
+qyq	.bss 0x00000000 : { *(.bss) } > RAM
 	.vectors 0xff000000 : { *(.vectors) } > ROM
 	.text 0xff000400 : { *(.text) } > ROM
 	.rodata : { *(.rodata) } > ROM
