@@ -18,15 +18,15 @@
 		.global dlputchar
 		.global dlputstr
 
-serialinit:	move.b #0b10000011,LCR16C654+BASEPA
-		move.b #0x0c,DLL16C654+BASEPA	| 38.4k
-		move.b #0,DLM16C654+BASEPA
-		move.b #0b00000011,LCR16C654+BASEPA
+serialinit:	move.b #0x05, CR26C94+BASEPA	| enable tx and rx
+                move.b #0b00010011, MRX26C94+BASEPA	| 8 bit, no parity
+		move.b #0x07, MRX26C94+BASEPA	|  1 stop bit
+		move.b #0xcc, CSR26C94+BASEPA	| 38.4kbaud
 
-		move.b #0b10000011,LCR16C654+BASEPB
-		move.b #0x0c,DLL16C654+BASEPB	| 38.4k
-		move.b #0,DLM16C654+BASEPB
-		move.b #0b00000011,LCR16C654+BASEPB
+		move.b #0x05, CR26C94+BASEPB	| enable tx and rx
+                move.b #0b00010011, MRX26C94+BASEPB	| 8 bit, no parity
+		move.b #0x07, MRX26C94+BASEPB	|  1 stop bit
+		move.b #0xcc, CSR26C94+BASEPB	| 38.4kbaud
 		rts
 
 conputstr:
@@ -41,9 +41,10 @@ serputstr:	move.w %d0,-(%sp)
 | put the char in d0
 
 conputchar:
-serputchar:	btst.b #5,LSR16C654+BASEPA	| busy sending last char?
+serputchar:	btst.b #3,SR26C94+BASEPA 	| busy sending last char?
 		beq serputchar			| yes, look again
-		move.b %d0,THR16C654+BASEPA	| put that byte
+		move.b %d0,TXFIFO26C94+BASEPA	| put that byte
+
 		rts
 
 | get a str in a0
@@ -87,21 +88,21 @@ getstrbs:	tst.w %d1			| see if the char count is 0
 | get a char in d0
 
 congetchar:
-sergetchar:	btst.b #0,LSR16C654+BASEPA	| chars?
+sergetchar:	btst.b #0,SR26C94+BASEPA	| chars?
 		beq sergetchar			| no chars yet
-		move.b RHR16C654+BASEPA,%d0	| get it in d0
+		move.b RXFIFO26C94+BASEPA,%d0	| get it in d0
 		rts
 
 |||
 
-dlputchar:	btst.b #5,LSR16C654+BASEPB	| busy sending last char?
+dlputchar:	btst.b #5,SR26C94+BASEPB	| busy sending last char?
 		beq dlputchar			| yes, look again
-		move.b %d0,THR16C654+BASEPB	| put that byte
+		move.b %d0,TXFIFO26C94+BASEPB	| put that byte
 		rts
 
-dlgetchar:	btst.b #0,LSR16C654+BASEPB	| chars?
+dlgetchar:	btst.b #0,SR26C94+BASEPB	| chars?
 		beq dlgetchar			| no chars yet
-		move.b RHR16C654+BASEPB,%d0	| get it in d0
+		move.b RXFIFO26C94+BASEPB,%d0	| get it in d0
 		rts
 
 dlputstr:	move.w %d0,-(%sp)

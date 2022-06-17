@@ -2,25 +2,23 @@ TOOLCHAIN = m68k-linux-gnu
 
 AS = $(TOOLCHAIN)-as
 LD = $(TOOLCHAIN)-ld
-GCC = $(TOOLCHAIN)-gcc-10
-LIBS = -L/usr/lib/gcc-cross/m68k-linux-gnu/10/ -lgcc
+GCC = $(TOOLCHAIN)-gcc
+LIBS = -L/usr/lib/gcc-cross/m68k-linux-gnu/8/ -lgcc
 OBJCOPY = $(TOOLCHAIN)-objcopy
 FLASHER = ./tools/flasher
 
 BIN = monitor.bin
 OBJS = main.o exceptions.o constants.o commands.o serial.o strings.o parser.o keyboard.o \
-	ide.o misc.o i2c.o keyboard.o ticks.o memtest.o \
+	ide.o misc.o i2c.o ticks.o memtest.o \
 	ne2k.o printer.o mandlebrot.o draw.o \
-	asm-wrapper.o mini-printf.o
+	asm-wrapper.o mini-printf.o string.o linux.o
 all: $(BIN)
 
 %.o: %.s
-	$(AS) -mcpu=68020 -m68882 --fatal-warnings $< -o $@
+	$(AS) -mcpu=68030 -m68881 --fatal-warnings $< -o $@
 
 %.o: %.c
-#	$(GCC) -std=c99 -O0 -Iinclude -Wall -mcpu=68000 -c $< -o $@
-	$(GCC) -std=c99 -O0 -mstrict-align -fomit-frame-pointer -ffreestanding  -Iinclude -Wall -mcpu=68020 -c $< -o $@
-
+	$(GCC) -std=c99 -O0 -mstrict-align -fomit-frame-pointer -ffreestanding  -Iinclude -Wall -mcpu=68030 -m68881 -c $< -o $@
 monitor.elf: $(OBJS)
 	$(LD) -T linker.scr $^ $(LIBS) -o $@
 
@@ -30,7 +28,7 @@ monitor.elf: $(OBJS)
 	rm -f $@.t
 
 flash:
-	$(FLASHER) -s /dev/ttyS4 -f $(BIN)
+	$(FLASHER) -s /dev/ttyUSB0 -f $(BIN)
 	
 clean:
 	rm -f *.o *.elf *.bin

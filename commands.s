@@ -64,19 +64,19 @@ commandarray:	checkcommand "readbyte", 3
 |		checkcommand "i2splay", 3, 2
 		checkcommand "eepromread", 1, 3, 2, 2
 		checkcommand "eepromwrite", 1, 3, 2, 2
-		nocheckcommand "floattest"
-		nocheckcommand "initnic"
-		nocheckcommand "transmit"
-		checkcommand "readmem", 2, 3, 2
-		checkcommand "writemem", 2, 3, 2
-		nocheckcommand "readmemw"
-|		nocheckcommand "oldinitnic"
-|		checkcommand "oldtransmit", 3, 2
-		nocheckcommand "nicmain"
+		checkcommand "floattest", 3
 		checkcommand "print", 3, 2
 		nocheckcommand "mandlebrot"
 		nocheckcommand "clearscreen"
 		nocheckcommand "drawstuff"
+		nocheckcommand "looptest"
+		checkcommand "ethdl", 0x80, 3
+		nocheckcommand "linuxdl"
+		checkcommand "linuxrun", 0x80
+		nocheckcommand "testtransmit"
+		nocheckcommand "resetkeyboard"
+		nocheckcommand "identkeyboard"
+		nocheckcommand "initmouse"
 		endcommand
 
 		.section .text
@@ -295,6 +295,26 @@ diskread:	movea.l (0*4,%a1),%a0		| get address to write in
 		move.l (2*4,%a1),%d0		| and the count
 		bsr ideread			| do the read command
 		rts
+
+ethdl:		move.l (1*4,%a1),-(%sp)
+		move.l (0*4,%a1),-(%sp)
+		bsr eth_download
+		lea 8(%sp),%sp
+		rts
+
+linuxdl:	move.l #0x1000,-(%sp)
+		move.l #vmlinux_name,-(%sp)
+		bsr eth_download
+		lea 8(%sp),%sp
+		rts
+
+linuxrun:	move.l (0*4,%a1),-(%sp)		| stack the string
+		bsr linux_bootinfo		| set bootinfo with cmdlien
+		lea 4(%sp),%sp			| restore sp
+		move.l #0x0000,%d0
+		movec.l %d0,%cacr
+		move.w #0x2700,%sr
+		jmp 0x1000			| start the kernel
 
 diskwrite:	movea.l (0*4,%a1),%a0		| get address to write in
 		move.l (1*4,%a1),%d1		| get the start sector
@@ -634,8 +654,31 @@ filesizemsg:	.asciz "File size: "
 |
 |		rts
 
-showscancodes:	btst.b #0,PS2ASTATUS
-		beq showscancodes
+initmouse:	move.b #0xf4,%d0
+		bsr txkeyboard
+		bsr rxkeyboard
+		rts
+
+identkeyboard:	move.b #0xf2,%d0
+		bsr txkeyboard
+		bsr rxkeyboard
+		bsr rxkeyboard
+		bsr rxkeyboard
+		rts
+
+showscancodes:	bsr rxkeyboard
+		bra showscancodes		
+
+txkeyboard:	btst.b #2,PS2ASTATUS
+		beq txkeyboard
+		move.b %d0,PS2ASCANCODE
+1:		btst.b #2,PS2ASTATUS
+		bne 1b
+		rts
+
+rxkeyboard:	movem.l %a0-%a1,-(%sp)
+1:		btst.b #0,PS2ASTATUS
+		beq 1b
 		move.b PS2ASCANCODE,%d0
 		movea.l #printbuffer,%a0	| set the output buffer
 		bsr bytetoascii			| convert into a0
@@ -643,12 +686,21 @@ showscancodes:	btst.b #0,PS2ASTATUS
 		bsr strconcat			| add it
 		movea.l #printbuffer,%a0	| wind buffer back
 		bsr conputstr			| and print it
-		bra showscancodes		
+		movem.l (%sp)+,%a0-%a1
+		rts
 
-keyleds:	move.b #0xed,PS2ASCANCODE
-		move.w #0x8000,%d0
-1:		dbra %d0,1b
-		move.b (0*4+3,%a1),PS2ASCANCODE
+keyleds:	move.b #0xed,%d0
+		bsr txkeyboard
+		bsr rxkeyboard
+		move.b (0*4+3,%a1),%d0
+		bsr txkeyboard
+		bsr rxkeyboard
+		rts
+
+resetkeyboard:	move.b #0xff,%d0
+		bsr txkeyboard
+		bsr rxkeyboard
+		bsr rxkeyboard
 		rts
 
 ledon:		move.b #1,LED
@@ -659,7 +711,7 @@ ledoff:		move.b #0,LED
 		rts
 
 reset:		reset
-		bra start
+		rts
 
 |dma:		move.l #0,VGARWADDRHI
 |		move.l (0*4,%a1),DMASRCHI
@@ -686,42 +738,8 @@ floattest:	fmove.d #0f2.0,%fp0
 		fsqrt.x %fp0
 		move.l (0*4+0,%a1),%a0
 		fmove.d %fp0,(%a0)
-
 		rts
 
-initnic:	bsr ne2k_setup
-		rts
-
-transmit:	bsr transmit_wrapper
-		rts
-
-readmem:	move.l (2*4,%a1),-(%sp)
-		move.l (1*4,%a1),-(%sp)
-		move.l (0*4,%a1),-(%sp)
-		bsr ne2k_readmem
-		lea.l 12(%sp),%sp
-		rts
-
-writemem:	move.l (2*4,%a1),-(%sp)
-		move.l (1*4,%a1),-(%sp)
-		move.l (0*4,%a1),-(%sp)
-		bsr ne2k_writemem
-		lea.l 12(%sp),%sp
-		rts
-
-readmemw:	bsr readmem_wrapper
-		rts 
-
-|oldinitnic:	bsr rtlinit
-|		rts
-|
-|oldtransmit:	move.l (0*4+0,%a1),%a0
-|		move.l (1*4+2,%a1),%d0
-|		bsr sendpacket
-|		rts
-
-nicmain:	bsr main
-		rts
 
 print:		move.l (1*4,%a1),-(%sp)			| length.w
 		move.l (0*4,%a1),-(%sp)			| data.l
@@ -732,10 +750,34 @@ print:		move.l (1*4,%a1),-(%sp)			| length.w
 mandlebrot:	bsr mandlebrotc
 		rts
 		
+
+looptest:	moveq.l #1,%d0
+		move.w #0x800,%d1
+		move.b #1,LED
+		move.l #1,temp
+1:		add.l temp,%d0
+		dbra %d1,1b
+		move.b #0,LED
+		movea.l #printbuffer,%a0	| set the output buffer
+		bsr longtoascii			| convert into a0
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		movea.l #printbuffer,%a0	| wind buffer back
+		bsr conputstr			| and print it
+		rts		
+
+testtransmit:	bsr ne2k_setup
+		bsr test_transmit
+		rts
+		
 		.section .bss
 		.align 2
 
 | shared buffer used for printing.
 
 printbuffer:	.space 256
+temp:		.long
 
+		.section .rodata
+
+vmlinux_name:	.asciz "vmlinux.bin"

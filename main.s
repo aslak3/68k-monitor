@@ -5,12 +5,12 @@
 
 		.global start
 
-start:
+start:		movea.l #0x01000000,%sp		| 16 MB
 
-| clear the first 1MB
+| clear the first 32MB
 
 		movea.l #0x00000000,%a0		| start at 0
-		move.w #(((1024*1024)/4)/65536)-1,%d1
+		move.w #(((4*1024*1024)/4)/65536)-1,%d1
 						| number of 64KB long blocks
 1:		move.w #65536-1,%d0		| 64KB of long words
 2:		clr.l (%a0)+			| clear it
@@ -31,7 +31,10 @@ start:
 1:		move.w #0xff00,(%a0)+
 		dbra %d0,1b
 
+		move.l #0x0101,%d0
+		movec.l %d0,%cacr
 		move.w #0x2000,%sr
+
 		move.b #0,LED
 
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands

@@ -7,15 +7,20 @@
 		.global timerinit
 		.global timeruninit
 		.global timerticks
-		.global vblticks
 
-timerinit:	move.l #timerisr,VUSER128
+timerinit:	move.l #timerisr,VL1AUTOVECTOR
+		clr.l timerticks
+		move.b #0x10,TIMERCOUNTU
+		move.b #1,TIMERCONTROL
 		rts
 
 timeruninit:	rts
 
-timerisr:	addq.l #1,timerticks
-		move.b #0,RTCINTCONTROL
+timerisr:	move.m %d0,-(%sp)
+		addq.l #1,timerticks
+		move.b #1,TIMERCONTROL		| clear interrupt
+		move.m (%sp)+,%d0
+
 		rte				| rte!
 
 		.section .bss

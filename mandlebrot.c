@@ -16,7 +16,13 @@
 #include "mini-printf.h"
 
 static void color();
-uint16_t *ptr;
+uint16_t ptr;
+
+static void runcommand(uint16_t command)
+{
+	WRITE_WORD(VIDCOMMAND, command);
+	while (READ_WORD(VIDSTATUS) & 0x0001);
+}
 
 void mandlebrotc(void)
 {
@@ -26,19 +32,8 @@ void mandlebrotc(void)
 	double magnify=1.0;		/* no magnification		*/
 	int hxres = 640;		/* horizonal resolution		*/
 	int hyres = 480;		/* vertical resolution		*/
-	int c;
 	
-	for (c = 1; c < 100; c++)
-	{
-		float f = 1.0/c;
-		
-		printf("%d\r\n", (int)(f*1000.0));
-	}
-	WRITE_BYTE(LED, 1);
-	WRITE_WORD(0x80200008, 0);
-	WRITE_WORD(0x8020000c, 0);
-	
-	ptr = (uint16_t *)0x80000000;
+	ptr = 0;//(uint16_t *)0x80000000;
 
 	for (hy=1;hy<=hyres;hy++)  {
 		for (hx=1;hx<=hxres;hx++)  {
@@ -59,6 +54,11 @@ void mandlebrotc(void)
 
 static void color(int red, int green, int blue)
 {
-	WRITE_WORD(ptr, (uint16_t) ( (red / 8) | ((green / 4) << 5) | ((blue / 8) << 9)) );
+	WRITE_WORD(VIDPENCOLOUR, (uint16_t) ( (red / 8) | ((green / 4) << 5) | ((blue / 8) << 9)) );
+	WRITE_WORD(VIDX0, ptr % 640);
+	WRITE_WORD(VIDY0, ptr / 640);
+	WRITE_WORD(VIDX1, ptr % 640);
+	WRITE_WORD(VIDY1, ptr / 640);
+	runcommand(VIDCOMMHOLLOWBOX);
 	ptr = ptr + 1;
 }

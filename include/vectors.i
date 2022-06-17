@@ -16,6 +16,7 @@
 		.equ VL5AUTOVECTOR,		116
 		.equ VL6AUTOVECTOR,		120
 		.equ VL7AUTOVECTOR,		124
+		.equ VUSER64,			256
 		.equ VUSER128,			512
 		.equ VUSER129,			516
 		.equ VUSER130,			520

@@ -1,6 +1,6 @@
 | core
 
-		.equ COREBASE, 0x84000000
+		.equ COREBASE, 0x44000000
 		.equ LED, COREBASE+0x0
 		.equ BUZZER, COREBASE+0x1
 		.equ SYSCONF, COREBASE+0x2
@@ -14,45 +14,57 @@
 		.equ I2CCONTROL, COREBASE+0xa
 		.equ I2CSTATUS, I2CCONTROL
 		.equ RTCINTCONTROL, COREBASE+0xb
+		.equ SPIDATA, COREBASE+0xc
+		.equ TIMERCOUNTU, COREBASE+0xd
+		.equ TIMERCOUNTM, COREBASE+0xe
+		.equ TIMERCOUNTL, COREBASE+0xf
+		.equ TIMERCONTROL, COREBASE+0x10
 
 		.equ ROMB, _rom_start
 
 | regsiters within one port
 
-		.equ RHR16C654, 0
-		.equ THR16C654, 0
-		.equ IER16C654, 1
-		.equ ISR16C654, 2
-		.equ FCR16C654, 2
-		.equ LCR16C654, 3
-		.equ MCR16C654, 4
-		.equ LSR16C654, 5
-		.equ MSR16C654, 6
-		.equ SPR16C654, 7
-		.equ DLL16C654, 0
-		.equ DLM16C654, 1
-		.equ EFR16C654, 2
-		.equ XON116C654, 4
-		.equ XON216C654, 5
-		.equ XOFF116C654, 6
-		.equ XOFF216C654, 7
+		.equ MRX26C94, 0
+		.equ SR26C94, 1
+		.equ CSR26C94, 1
+		.equ CR26C94, 2
+		.equ RXFIFO26C94, 3
+		.equ TXFIFO26C94, 3
 
-| the base address of each port
+| registers within one port pair
 
-		.equ BASE16C654, 0x84010000
+		.equ IPCR26C94, 4
+		.equ ACR26C94, 4
+		.equ ISR26C94, 5
+		.equ IMR26C94, 5
+		.equ CTU26C94, 6
+		.equ CTL26C94, 7
+		.equ START26C94, 14
+		.equ STOP26C94, 15
 
-		.equ BASEPA16C654, BASE16C654+0
-		.equ BASEPA, BASEPA16C654
-		.equ BASEPB16C654, BASE16C654+8
-		.equ BASEPB, BASEPB16C654
-		.equ BASEPC16C654, BASE16C654+16
-		.equ BASEPC, BASEPC16C654
-		.equ BASEPD16C654, BASE16C654+24
-		.equ BASEPD, BASEPD16C654
+| globals
+
+		.equ IVR26C94, 41
+
+| the base address of each port and port pair
+
+		.equ BASE26C94, 0x44010000
+
+		.equ BASEPA26C94, BASE26C94+0
+		.equ BASEPA, BASEPA26C94
+		.equ BASEPB26C94, BASE26C94+8
+		.equ BASEPB, BASEPB26C94
+		.equ BASEPC26C94, BASE26C94+16
+		.equ BASEPC, BASEPC26C94
+		.equ BASEPD26C94, BASE26C94+24
+		.equ BASEPD, BASEPD26C94
+
+		.equ BASEPAB, BASEPA26C94
+		.equ BASEPCD, BASEPCC2694
 
 | ide registers
 
-		.equ IDEBASE, 0x84020000
+		.equ IDEBASE, 0x44020000
 		.equ IDEDATA, IDEBASE+0
 		.equ IDEERR, IDEBASE+4
 		.equ IDEFEATURES, IDEBASE+4
@@ -93,7 +105,7 @@
 
 | RTL8019
 
-		.equ RTL8019_BASE, 0x80000000
+		.equ RTL8019_BASE, 0x44040000
 
 | configuration registers initial values
 

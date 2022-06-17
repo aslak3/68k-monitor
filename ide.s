@@ -9,24 +9,28 @@
 
 | ideread - read to memory a0 from sectors in d1, count in d0 sectors
 
-ideread:	move.b %d0,%d2		| save sector count
+ideread:	movem.l %d2,-(%sp)
+		move.b %d0,%d2		| save sector count
 		bsr seeknewpos		| seek to the current position
 		move.b #IDECOMREADSEC,%d0
 					| this is read sector
 		bsr simpleidecomm	| send the command
 		move.b %d2,%d0		| restore sector count
 		bsr idellread		| read into a0
+		movem.l (%sp)+,%d2
 		rts
 
 | idewrite - write from memory a0 to sectors in d1, count in d0 sectors
 
-idewrite:	move.b %d0,%d2		| save sector count
+idewrite:	movem.l %d2,-(%sp)
+		move.b %d0,%d2		| save sector count
 		bsr seeknewpos		| seek to the current position
 		move.b #IDECOMWRITESEC,%d0
 					| this is write sector
 		bsr simpleidecomm	| send the command
 		move.b %d2,%d0		| restore sector count
 		bsr idellwrite		| write into a0
+		movem.l (%sp)+,%d2
 		rts
 
 | ideidentify - get info about the device into a0
@@ -35,6 +39,7 @@ ideidentify:	move.b #IDECOMIDENTIFY,%d0
 					| the identify command
 		bsr simpleidecomm	| send it
 		move.b #1,%d0		| only one sector for identify
+
 		bsr idellread		| 512 reads into a0
 		bsr swapsector		| byte swap
 		rts
@@ -46,8 +51,9 @@ ideidentify:	move.b #IDECOMIDENTIFY,%d0
 
 seeknewpos:	move.b %d0,IDECOUNT	| how many sectors?
 		move.b %d1,IDELBA0	| this is the lowest byte in lba
-		lsr.w #8,%d1		| move the high byte down
+		ror.w #8,%d1		| move the high byte down
 		move.b %d1,IDELBA1	| this is the 2nd lowest byte in lba
+		ror.w #8,%d1		| restore sectore number
 		clr.b IDELBA2		| other two lba are zero
 		clr.b IDELBA3
 		rts
@@ -74,8 +80,8 @@ idewaitfordata: btst.b #IDESTATUSDRQ,IDESTATUS
 idellread:	movem.l %a0-%a1/%d1,-(%sp)	| save the start of memory
 		bsr idewaitfordata	| need to wait for data, as reading
 		movea.l #IDEDATA,%a1
-1:		move.w #128-1,%d1	| setup the number words per sector
-2:		move.l (%a1),(%a0)+	| read the word from the ide port
+1:		move.w #256-1,%d1	| setup the number words per sector
+2:		move.w (%a1),(%a0)+	| read the word from the ide port
 		dbra %d1,2b		| go back for more
 		sub.w #1,%d0		| decrement sectors remaining
 		bne 1b 			| more? go and get it
@@ -87,8 +93,8 @@ idellread:	movem.l %a0-%a1/%d1,-(%sp)	| save the start of memory
 idellwrite:	movem.l %a0-%a1/%d1,-(%sp)	| save the start of memory
 		bsr idewaitfordata	| need to wait for data, as reading
 		movea.l #IDEDATA,%a1
-1:		move.w #128-1,%d1	| setup the number words per sector
-2:		move.l (%a0)+,(%a1)	| write the word to the ide data port
+1:		move.w #256-1,%d1	| setup the number words per sector
+2:		move.w (%a0)+,(%a1)	| write the word to the ide data port
 		dbra %d1,2b		| go back for more
 		sub.w #1,%d0		| decrement sectors remaining
 		bne 1b 			| more? go and get it

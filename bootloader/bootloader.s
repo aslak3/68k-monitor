@@ -11,7 +11,7 @@ resetpc:	.long _start			| the initial pc
 
 		.section .text
 
-_start:		move.b #0x00,SYSCONF		| write protect eeprom
+_start:		|move.b #0x00,SYSCONF		| write protect eeprom
 
 |		move.w #0xffff,LED
 |		move.l #0,%d0
@@ -19,10 +19,17 @@ _start:		move.b #0x00,SYSCONF		| write protect eeprom
 |		move.w #0,LED
 |		bsr cmpmemtolong
 
-		move.b #0b10000011,LCR16C654+BASEPB
-		move.b #0x0c, DLL16C654+BASEPB	| 38.4kbaud
-		move.b #0, DLM16C654+BASEPB
-		move.b #0b00000011, LCR16C654+BASEPB
+		move.b #0x05, CR26C94+BASEPB	| enable tx and rx
+		move.b #0b00010011, MRX26C94+BASEPB | 8 bit, no parity
+		move.b #0x07, MRX26C94+BASEPB	|  1 stop bit
+		move.b #0xcc, CSR26C94+BASEPB	| 38.4kbaud
+
+		move.b #1,SPIDATA
+
+|		movea.l #hellomsg,%a0
+|		bsr putstring
+
+		move.b #2,SPIDATA
 
 		move.b #0x00,LED
 		move.b #0x00,BUZZER
@@ -33,6 +40,8 @@ _start:		move.b #0x00,SYSCONF		| write protect eeprom
 1:		move.l (%a0)+,(%a1)+		| copy longs
 		dbra %d0,1b			| back for more
 
+		move.b #3,SPIDATA
+
 		move.b #0x01,LED
 		move.b #0x40,BUZZER
 
@@ -41,13 +50,21 @@ _start:		move.b #0x00,SYSCONF		| write protect eeprom
 		add.l #ramcopy,%d0
 		move.l %d0,%a0
 
+		move.b #4,SPIDATA
+
 		jmp (%a0)
 
-begin:		move.b #0x00,BUZZER
+begin:		move.b #5,SPIDATA
+
+		move.b #0x00,BUZZER
+
+		move.b #6,SPIDATA
 
 		|lea resetmsg(%pc),%a0		| grab the greeting in a0
 		movea.l #resetmsg,%a0
 		bsr putstring			| send it
+
+		move.b #7,SPIDATA
 
 		bsr getcharwithto		| get a char with timeout
 		bne normalstart			| timeout so normal start
@@ -92,6 +109,24 @@ pagestart:	movea.l #eightkbytes,%a0	| ram copy of page
 		move.w #0xff00,%d0		| delay, maybe 20mS?
 1:		dbra %d0,1b
 		move.b #0,LED
+		move.b #1,LED
+		move.w #0xff00,%d0		| delay, maybe 20mS?
+1:		dbra %d0,1b
+		move.w #0xff00,%d0		| delay, maybe 20mS?
+1:		dbra %d0,1b
+		move.b #0,LED
+		move.b #1,LED
+		move.w #0xff00,%d0		| delay, maybe 20mS?
+1:		dbra %d0,1b
+		move.w #0xff00,%d0		| delay, maybe 20mS?
+1:		dbra %d0,1b
+		move.b #0,LED
+		move.b #1,LED
+		move.w #0xff00,%d0		| delay, maybe 20mS?
+1:		dbra %d0,1b
+		move.w #0xff00,%d0		| delay, maybe 20mS?
+1:		dbra %d0,1b
+		move.b #0,LED
 
 |		bsr togglepoll
 
@@ -103,7 +138,7 @@ pagestart:	movea.l #eightkbytes,%a0	| ram copy of page
 		move.w #0xa0a0,ROMB+(0x5555*2)	| byte program 3rd cycle
 		move.w (%a0)+,(%a1)		| save it to realrom
 
-		move.w #0x20,%d0		| delay, maybe 20uS?
+		move.w #0x100,%d0		| delay, maybe 20uS?
 2:		dbra %d0,2b
 
 |		bsr togglepoll
@@ -136,9 +171,9 @@ putstring:	move.b (%a0)+,%d0		| get the byte to put
 
 | put the char in d0
 
-putchar:	btst.b #5,LSR16C654+BASEPB	| busy sending last char?
+putchar:	btst.b #3,SR26C94+BASEPB	| busy sending last char?
 		beq putchar			| yes, look again
-		move.b %d0,THR16C654+BASEPB	| put that byte
+		move.b %d0,TXFIFO26C94+BASEPB	| put that byte
 		rts
 
 | get a string in a0
@@ -156,9 +191,9 @@ getstring:	bsr getchar
 
 | get a char in d0
 
-getchar:	btst.b #0,LSR16C654+BASEPB	| chars?
+getchar:	btst.b #0,SR26C94+BASEPB	| chars?
 		beq getchar			| no chars yet
-		move.b RHR16C654+BASEPB,%d0	| get it in d0
+		move.b RXFIFO26C94+BASEPB,%d0	| get it in d0
 		rts
 
 | get a char with a two second (ish) timeout, exit zero for got a char
@@ -167,9 +202,9 @@ getchar:	btst.b #0,LSR16C654+BASEPB	| chars?
 getcharwithto:	move.w #0xffff,%d0		| get timer
 1:		sub.w #1,%d0			| dec timer
 		beq 2f				| timeout reached
-		btst.b #0,LSR16C654+BASEPB	| chars?
+		btst.b #0,SR26C94+BASEPB	| chars?
 		beq 1b				| no chars yet
-		move.b RHR16C654+BASEPB,%d0	| get it in d0
+		move.b RXFIFO26C94+BASEPB,%d0	| get it in d0
 		ori #0x04,%ccr			| set zero
 		rts
 2:		ori #0xfb,%ccr			| clear zero
@@ -228,11 +263,12 @@ togglepoll:	movem.w %d0-%d1,-(%sp)
 
 		.section .rodata
 
+hellomsg:	.asciz "\r\nHello from flash\r\n"
 resetmsg:	.asciz "\r\n***flash with f\r\n"
 flashreadymsg:	.asciz "+++"
 norealrommsg:	.asciz "No real ROM loaded, STOP\r\n"
 
-| the "real" ROM image goes 2KB into the address space, for now just print
+| the "real" ROM image goes 8KB into the address space, for now just print
 | a message.
 
 		.section .realrom, #alloc

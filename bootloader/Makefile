@@ -7,7 +7,7 @@ SINGLEBINS = bootloader
 UPPERBINS = $(addsuffix -upper.bin, $(basename $(SINGLEBINS)))
 LOWERBINS = $(addsuffix -lower.bin, $(basename $(SINGLEBINS)))
 
-BINS = bootloader.bin $(UPPERBINS) $(LOWERBINS)
+BINS = bootloader.elf $(UPPERBINS) $(LOWERBINS)
 
 BOARD = MIDI020
 
