@@ -56,7 +56,7 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "reset"
 |		nocheckcommand "mousetest"
 |		checkcommand "dma", 3, 2
-		nocheckcommand "memtest"
+		checkcommand "memtest", 3, 3
 |		nocheckcommand "vidmemtest"
 |		nocheckcommand "anajoytest"
 		checkcommand "i2ctx", 1, 3, 2
@@ -77,6 +77,10 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "resetkeyboard"
 		nocheckcommand "identkeyboard"
 		nocheckcommand "initmouse"
+		nocheckcommand "vcardledon"
+		nocheckcommand "vcardledoff" 
+		nocheckcommand "emutosdl"
+		nocheckcommand "emutosrun"
 		endcommand
 
 		.section .text
@@ -704,7 +708,6 @@ resetkeyboard:	move.b #0xff,%d0
 		rts
 
 ledon:		move.b #1,LED
-
 		rts
 
 ledoff:		move.b #0,LED
@@ -719,7 +722,11 @@ reset:		reset
 |		move.w #0x0003,DMAFLAGS
 |		rts
 
-|
+memtest:	move.l (0*4+0,%a1),%d2		| start
+		move.l (1*4+0,%a1),%d1		| length
+		jsr memtester
+
+
 |vidmemtest:	move.w #0,%d0
 |1:		bsr vsetmemtoword
 |		bsr vcmpmemtoword
@@ -770,6 +777,26 @@ testtransmit:	bsr ne2k_setup
 		bsr test_transmit
 		rts
 		
+
+vcardledon:	move.w #1,VCARDLED
+		rts
+
+vcardledoff:	move.w #0,VCARDLED
+		rts
+
+
+emutosdl:	move.l #0x01000000,-(%sp)
+		move.l #emutos_name,-(%sp)
+		bsr eth_download
+		lea 8(%sp),%sp
+		rts
+
+emutosrun:	move.l #0x0000,%d0
+		movec.l %d0,%cacr
+		move.w #0x2700,%sr
+		jmp 0x01000000			| start the thing
+
+
 		.section .bss
 		.align 2
 
@@ -781,3 +808,5 @@ temp:		.long
 		.section .rodata
 
 vmlinux_name:	.asciz "vmlinux.bin"
+emutos_name:	.asciz "emutos.img"
+

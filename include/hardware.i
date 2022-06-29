@@ -20,6 +20,10 @@
 		.equ TIMERCOUNTL, COREBASE+0xf
 		.equ TIMERCONTROL, COREBASE+0x10
 
+		.equ VCARDREGBASE, 0x40200000
+		.equ VCARDLED, VCARDREGBASE+0xa
+		.equ VCARDVBLANKINTCLEAR, VCARDREGBASE+0x10
+
 		.equ ROMB, _rom_start
 
 | regsiters within one port
