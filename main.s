@@ -19,11 +19,11 @@ start:		movea.l #0x01000000,%sp		| 16 MB
 
 		move.b #1,LED
 
-		bsr exceptionsinit		| setup execption handlers
+|		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
-		bsr timerinit			| prepare the timer
+|		bsr timerinit			| prepare the timer
 |		bsr vgainit
-		bsr keyboardinit
+|		bsr keyboardinit
 |		bsr mouseinit
 
 		move.w #1024-1,%d0

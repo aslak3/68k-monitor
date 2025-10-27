@@ -1,8 +1,7 @@
 #include <mini-printf.h>
 #include <string.h>
-#include <linux/bootinfo.h>
 
-#include <linux-sender-protocol.h>
+#include <sender-protocol.h>
 
 void ne2k_setup(void);
 uint16_t ne2k_receive(uint8_t *payload, uint16_t payload_size);
@@ -71,52 +70,3 @@ void eth_download(char *filename, uint8_t *start)
 	while (target < bootinfo_ptr + 0x2000)
 		*target++ = '\0';
 }
-
-#define CL_SIZE 256
-
-void linux_bootinfo(const char *command_line)
-{
-	char cl[CL_SIZE];
-
-	memset(cl, 0, CL_SIZE);
-	strcpy(cl, command_line);
-	
-	printf("Commandline passed: %s\r\n", command_line);
-	printf("BootInfo at %08x\r\n", bootinfo_ptr);
-
-	bootinfo_ptr = add_tag_ul(bootinfo_ptr, BI_MACHTYPE, MACH_MAXI030);
-	bootinfo_ptr = add_tag_ul(bootinfo_ptr, BI_CPUTYPE, CPU_68030);
-	bootinfo_ptr = add_tag_ul(bootinfo_ptr, BI_FPUTYPE, FPU_68882);
-	bootinfo_ptr = add_tag_ul(bootinfo_ptr, BI_MMUTYPE, MMU_68030);
-	
-	struct mem_info m;
-	m.addr = 0;
-	m.size = 32 * 1024 * 1024;
-	bootinfo_ptr = add_tag(bootinfo_ptr, BI_MEMCHUNK, sizeof(struct mem_info), &m);
-
-//	bootinfo_ptr = add_tag(bootinfo_ptr, BI_COMMAND_LINE, 36, "console=ttySC0,38400 root=/dev/sda2");
-//	bootinfo_ptr = add_tag(bootinfo_ptr, BI_COMMAND_LINE, 49, "console=ttySC0,38400 root=/dev/sda2 init=/bin/sh");
-	bootinfo_ptr = add_tag(bootinfo_ptr, BI_COMMAND_LINE, CL_SIZE, cl);
-	
-	bootinfo_ptr = add_tag(bootinfo_ptr, BI_LAST, 0, NULL);
-}
-
-void *add_tag(void *start, unsigned short id, unsigned short size, void *data)
-{
-	struct bi_record *bi;
-
-	bi = (struct bi_record *) start;
-	bi->tag = id;
-	bi->size = size + sizeof(struct bi_record);
-
-	if (size)
-		memcpy(&bi->data[0], data, size);
-
-	return (void *)((char *)start + bi->size);
-}
-
-void *add_tag_ul(void *start, unsigned short id, unsigned long data)
-{
-	return add_tag(start, id, sizeof(unsigned long), &data);
-}
-

@@ -4,7 +4,7 @@
 #include <mini-printf.h>
 #include <string.h>
 
-#include <linux-sender-protocol.h>
+//#include <linux-sender-protocol.h>
 
 struct ne2k_struct ne2k;
 

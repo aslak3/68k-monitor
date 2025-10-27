@@ -15,7 +15,7 @@ maxtypes_\name:	.word \maxtypes
 com_\name:	.long \name			| handler pointer
 		.long maxtypes_\name		| list of maxtypes pointer
 		.section .rodata
-		.align 2
+		.align 4
 		.long name_\name		| name pointer
 		.long com_\name			| command descriptor
 .endm
@@ -29,7 +29,7 @@ name_\name:	.asciz "\name"
 com_\name:	.long \name			| handler pointer
 		.long 0				| list of maxtypes pointer
 		.section .rodata
-		.align 2
+		.align 4
 		.long name_\name		| name pointer
 		.long com_\name			| command descriptor
 .endm
