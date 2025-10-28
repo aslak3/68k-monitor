@@ -34,7 +34,7 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "download", 0x80, 3
 		nocheckcommand "memtest"
 		checkcommand "ethdl", 0x80, 3
-		endcommand
+		endcommand 0x400		| table in ram?
 
 		.section .text
 		.align 2

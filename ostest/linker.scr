@@ -1,0 +1,13 @@
+MEMORY
+{
+	RAM(RWX) : ORIGIN = 0x00000000, LENGTH = 32M
+}
+
+SECTIONS
+{
+	.vectors 0x00000000 : { *(.vectors) } > RAM
+	.rodata 0x00000400 : { *(.rodata) } > RAM
+	.text : { *(.text) } > RAM
+	.bss 0x01000000 : { *(.bss) } > RAM
+	.rodata : { *(.rodata) } > RAM
+}

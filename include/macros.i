@@ -34,7 +34,7 @@ com_\name:	.long \name			| handler pointer
 		.long com_\name			| command descriptor
 .endm
 
-.macro endcommand
+.macro endcommand nextblock
 		.long 0x0
-		.long 0x0			| vital!
+		.long \nextblock		| vital! probably 0
 .endm

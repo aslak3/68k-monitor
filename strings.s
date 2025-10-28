@@ -131,15 +131,20 @@ strcmp:		movem.l %a0-%a1,-(%sp)
 strmatcharray:	movem.l %a2,-(%sp)
 		movea.l %a0,%a2			| a2 is used for the list
 1:		move.l (%a2)+,%d0		| get the test string
-		beq 2f				| end of list?
+		beq 4f				| end of list?
 		move.l %d0,%a0			| move to a0 for compare
 		bsr strcmp			| check against cmd
 		beq 2f				| match!
 		move.l (%a2)+,%d0		| hop over the userdata
 		bra 1b				| check more
 2:		move.l (%a2)+,%d0		| get the user data/null
-		movem.l (%sp)+,%a2
+3:		movem.l (%sp)+,%a2
 		rts
+4:		move.l (%a2)+,%d0		| get the possible next hop
+		bne 5f				| got next table pointer
+		bra 3b				| otherwise we are done
+5:		move.l %d0,%a2			| reload the loop pointer
+		bra 1b		
 
 | concatenat the string in a1 on the end of the string in a0. on exit,
 | a0 will be pointing at the closing null.
