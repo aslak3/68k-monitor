@@ -9,5 +9,4 @@ SECTIONS
 	.rodata 0x00000400 : { *(.rodata) } > RAM
 	.text : { *(.text) } > RAM
 	.bss 0x01000000 : { *(.bss) } > RAM
-	.rodata : { *(.rodata) } > RAM
 }
