@@ -11,6 +11,7 @@ memorydump:	movea.l #HEAP_START,%a2		| get the start of the heap
 1:		lea (printbuffer,%pc),%a0	| start of print buffer
 		lea (thismsg,%pc),%a1		| next label
 		move.l %a2,%d0			| get the current block pointer
+		add #MEM_SIZE,%d0		| turn it into a useful pointer for free
 		movea.l #longtoascii,%a6	| printing a long for d0
 		bsr labandint			| print them into a0
 		lea (printbuffer,%pc),%a0	| wind buffer back

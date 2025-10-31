@@ -10,6 +10,7 @@
 		.global strconcat
 		.global makecharprint
 		.global toupper
+		.global labandint
 
 | convert the byte in d0 to hex, writing it into a0 and advancing it 2
 | bytes. d0.w is retained
@@ -166,9 +167,19 @@ makecharprint:	cmp.b #0x20,%d0			| compare with space
 1:		move.b #'.',%d0			| otherwise flatten it to dot
 		rts
 
+| makes the letter in d0 uppercase
+
 toupper:	cmp.b #'a,%d0			| compare with "a"
 		blo 1f				| lower? not a letter
 		cmp.b #'z,%d0			| compare with "z"
 		bhi 1f				| higher? not a letter
 		sub.b #'a-'A,%d0		| convert to uppercase
 1:		rts
+
+| puts the label in a1 with d0 printed by the routine in a6 into a0
+
+labandint:	bsr strconcat			| add the label to a0
+		jsr (%a6)			| use the passed routine to format
+		lea (newlinemsg,%pc),%a1	| need a newline
+		bsr strconcat			| add it
+		rts
