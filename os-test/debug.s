@@ -94,7 +94,7 @@ a7msg:		.asciz " A7="
 
 memorymsg:	.asciz "MEMORY: "
 
-		.section bss
+		.section .bss
 		.align 2
 
 printbuffer:	.space 256
