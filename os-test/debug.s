@@ -21,6 +21,8 @@
 		.global a6msg
 		.global a7msg
 
+		.global memorymsg
+
 		.section .text
 		.align 2
 
@@ -89,6 +91,8 @@ a4msg:		.asciz " A4="
 a5msg:		.asciz " A5="
 a6msg:		.asciz " A6="
 a7msg:		.asciz " A7="
+
+memorymsg:	.asciz "MEMORY: "
 
 		.section bss
 		.align 2

@@ -12,7 +12,7 @@
 .macro structend lab
 		.equ \lab, structrunning
 .endm
-		
+
 .macro debugreg label, reg
 		movem.l %d0/%a0,-(%sp)
 		move.l \reg,-(%sp)
@@ -26,17 +26,25 @@
 		movem.l (%sp)+,%d0/%a0
 .endm
 
-.macro debugprint message, flags
+.macro debugprint message, section, flags
+.if		\section & DEBUG_SECTIONS
 		.section .rodata
 _\@:		.asciz "\message"
 
 		.section .text
 		.align 2
 
-		movem.l %a0,-(%sp)
-		lea (_\@,%pc),%a0
+		movem.l %a0-%a1,-(%sp)
+		lea (printbuffer,%pc),%a0
+.if		\section == SECTION_MEMORY
+		lea (memorymsg,%pc),%a1
+.endif
+		bsr strconcat
+		lea (_\@,%pc),%a1
+		bsr strconcat
+		lea (printbuffer,%pc),%a0
 		bsr conputstr
-		movem.l (%sp)+,%a0
+		movem.l (%sp)+,%a0-%a1
 
 .if		\flags & REG_D0
 		debugreg d0msg, %d0
@@ -92,4 +100,5 @@ _\@:		.asciz "\message"
 		lea (newlinemsg,%pc),%a0
 		bsr conputstr
 		movem.l (%sp)+,%a0
+.endif
 .endm

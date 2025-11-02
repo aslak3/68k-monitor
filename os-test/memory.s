@@ -9,7 +9,7 @@
 
 | init the heap with a single free block
 
-memoryinit:	debugprint "memoryinit()", 0
+memoryinit:	debugprint "memoryinit called", SECTION_MEMORY, 0
 		movem.l %d0/%a0,-(%sp)
 		movea.l #HEAP_START,%a0		| get the start of the heap
 		clr.l MEM_NEXT(%a0)		| no next block
@@ -23,7 +23,7 @@ memoryinit:	debugprint "memoryinit()", 0
 | allocate a block of size d0 returning it in a0. if no room then zero is returned
 | and zero set in cc
 
-memoryalloc:	debugprint "memoryalloc called", REG_D0
+memoryalloc:	debugprint "memoryalloc called with", SECTION_MEMORY, REG_D0
 		movem.l %d1/%a1,-(%sp)
 		add.l #MEM_SIZE,%d0		| add the overheard to the request
 		movea.l #HEAP_START,%a0		| start at the start of the heap
@@ -60,7 +60,7 @@ _blockfitso:	adda.l #MEM_SIZE,%a0		| and header offset, caller..
 
 | frees the block - passed a block pointer in a0 as obtained from memoryalloc
 
-memoryfree:	debugprint "memoryfree" REG_A0
+memoryfree:	debugprint "memoryfree called with", SECTION_MEMORY, REG_A0
 		movem.l %d0/%a1,-(%sp)
 		suba.l #MEM_SIZE,%a0		| go back the size of the struct
 		move.w #1,MEM_FREE(%a0)		| mark it as free
@@ -87,5 +87,5 @@ _squashnext:	tst.w MEM_FREE(%a1)		| see if next is free
 		move.l %d0,MEM_LENGTH(%a0)	| set new length in current
 		movea.l MEM_NEXT(%a1),%a1	| get next's next pointer
 		move.l %a1,MEM_NEXT(%a0)	| set it to hop over next
-		debugprint "memoryfree squashed a block", (REG_D0+REG_A0)
+		debugprint "memoryfree squashed a block", SECTION_MEMORY, (REG_D0+REG_A0)
 		bra _memoryfreeout		| finished, next is bypassed

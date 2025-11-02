@@ -53,3 +53,7 @@ structend	NODE_SIZE
 		.equ REG_A5, (1 << 13)
 		.equ REG_A6, (1 << 14)
 		.equ REG_A7, (1 << 15)
+
+		.equ SECTION_MEMORY, (1 << 0)
+
+		.equ DEBUG_SECTIONS, (SECTION_MEMORY)
