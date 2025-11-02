@@ -33,3 +33,23 @@ structend	NODE_SIZE
 
 		.equ HEAP_START, 0x00010000	| 64KB in
 		.equ HEAP_LENGTH, 0x00080000	| 512KB
+
+| debug
+
+		.equ REG_D0, (1 << 0)
+		.equ REG_D1, (1 << 1)
+		.equ REG_D2, (1 << 2)
+		.equ REG_D3, (1 << 3)
+		.equ REG_D4, (1 << 4)
+		.equ REG_D5, (1 << 5)
+		.equ REG_D6, (1 << 6)
+		.equ REG_D7, (1 << 7)
+
+		.equ REG_A0, (1 << 8)
+		.equ REG_A1, (1 << 9)
+		.equ REG_A2, (1 << 10)
+		.equ REG_A3, (1 << 11)
+		.equ REG_A4, (1 << 12)
+		.equ REG_A5, (1 << 13)
+		.equ REG_A6, (1 << 14)
+		.equ REG_A7, (1 << 15)
