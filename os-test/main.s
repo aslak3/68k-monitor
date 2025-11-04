@@ -19,6 +19,7 @@ commandarray:   nocheckcommand "_memoryinit"
 		checkcommand "_addtail" 0x80
 		nocheckcommand "_remhead"
 		nocheckcommand "_remtail"
+		checkcommand "_remove" 3
 		nocheckcommand "_listdump"
 
 		endcommand 0x0
@@ -75,25 +76,40 @@ _addtail:	move.l (0*4,%a1),%a1
 
 _remhead:	movea.l #testlist,%a1
 		bsr remhead
+		bsr memoryfree
 		rts
 
 _remtail:	movea.l #testlist,%a1
 		bsr remtail
+		bsr memoryfree
+		rts
+
+_remove:	move.l (0*4,%a1),%a0
+		movea.l #testlist,%a1
+		bsr remove
+		bsr memoryfree
 		rts
 
 _listdump:	movea.l #testlist,%a1
-		movea.l (LIST_HEAD,%a1),%a1
+		movea.l (LIST_HEAD,%a1),%a2
 
-_listdumploop:	movea.l (NODE_NEXT,%a1),%a2
-		tst.l %a2
+_listdumploop:	tst (NODE_NEXT,%a2)
 		beq _listdumpo
 
-		lea (TEST_TEXT,%a1),%a0
-		bsr conputstr
-		lea (newlinemsg,%pc),%a0
+		move.l %a2,%d0
+		lea.l (printbuffer,%pc),%a0
+		bsr longtoascii
+		move.b #0x20,(%a0)+
+
+		move.l %a2,%a1
+		lea (TEST_TEXT,%a1),%a1
+		bsr strconcat
+		lea (newlinemsg,%pc),%a1
+		bsr strconcat
+		lea.l (printbuffer,%pc),%a0
 		bsr conputstr
 
-		move.l (NODE_NEXT,%a1),%a1
+		move.l (NODE_NEXT,%a2),%a2
 
 		bra _listdumploop
 _listdumpo:	rts

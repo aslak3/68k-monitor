@@ -39,6 +39,9 @@ _\@:		.asciz "\message"
 .if		\section == SECTION_MEMORY
 		lea (memorymsg,%pc),%a1
 .endif
+.if		\section == SECTION_LISTS
+		lea (listsmsg,%pc),%a1
+.endif
 		bsr strconcat
 		lea (_\@,%pc),%a1
 		bsr strconcat

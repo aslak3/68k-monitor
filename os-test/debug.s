@@ -22,6 +22,7 @@
 		.global a7msg
 
 		.global memorymsg
+		.global listsmsg
 
 		.section .text
 		.align 2
@@ -93,6 +94,7 @@ a6msg:		.asciz " A6="
 a7msg:		.asciz " A7="
 
 memorymsg:	.asciz "MEMORY: "
+listsmsg:	.asciz "LISTS: "
 
 		.section .bss
 		.align 2
