@@ -7,7 +7,7 @@ LIBS = -L/usr/lib/gcc-cross/m68k-linux-gnu/12/ -lgcc ../serial.o ../constants.o 
 ETH_SENDER = ../eth-sender/eth-sender
 
 BIN = os-test.bin
-OBJS = main.o memory.o lists.o debug.o
+OBJS = main.o memory.o lists.o debug.o tasks.o
 
 all: $(BIN)
 

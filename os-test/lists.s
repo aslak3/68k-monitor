@@ -9,7 +9,7 @@
 
 | init the list in a1 (y)
 
-listinit:	debugprint "listinit called", SECTION_LISTS, 0
+listinit:	debugprint "listinit called", SECTION_LISTS, REG_A1
 		movem.l %a0,-(%sp)
 		lea.l LIST_TAIL(%a1),%a0	| calc the tail node address
 		move.l %a0,LIST_HEAD(%a1)	| set the dummy head
@@ -33,7 +33,7 @@ addhead:	debugprint "addhead called", SECTION_LISTS, (REG_A0+REG_A1)
 
 | adds node at a0 to list at a1 to the tail of the list
 
-addtail:	debugprint "addhead called", SECTION_LISTS, (REG_A0+REG_A1)
+addtail:	debugprint "addtail called", SECTION_LISTS, (REG_A0+REG_A1)
 		movem.l %a2,-(%sp)
 		movea.l LIST_TAILPREV(%a1),%a2	| get the current tail node
 		move.l %a0,NODE_NEXT(%a2)	| set the old head node's next to the new node

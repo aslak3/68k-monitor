@@ -5,6 +5,9 @@
 		.section .rodata
 		.align 4
 
+		.global readytasks
+		.global currenttask
+
 structstart	NODE_SIZE
 member		TEST_TEXT,32
 structend	TEST_SIZE
@@ -21,6 +24,10 @@ commandarray:   nocheckcommand "_memoryinit"
 		nocheckcommand "_remtail"
 		checkcommand "_remove" 3
 		nocheckcommand "_listdump"
+
+		nocheckcommand "_tasktest"
+		nocheckcommand "_taskrun"
+		checkcommand "_taskdump", 3
 
 		endcommand 0x0
 
@@ -114,8 +121,32 @@ _listdumploop:	tst (NODE_NEXT,%a2)
 		bra _listdumploop
 _listdumpo:	rts
 
+_tasktest:	movea.l #readytasks,%a0
+		bsr listinit
+
+		movea.l #testtaskcode,%a0
+		bsr newtask
+
+		move.l %a0,currenttask
+		rts
+
+_taskdump:	move.l (0*4,%a1),%a0
+		bsr taskdump
+		rts
+
+_taskrun:	jmp _starttask
+
+testtaskcode:	lea (testmessage,%pc),%a0
+		bsr conputstr
+		bra testtaskcode
+
+testmessage:	.asciz "Hello from test task!!\r\n"
+
 		.section .bss
 		.align 4
 
 testlist:	.space LIST_SIZE
+
+readytasks:	.space LIST_SIZE
+currenttask:	.long 0
 

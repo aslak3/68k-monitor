@@ -23,7 +23,7 @@ memoryinit:	debugprint "memoryinit called", SECTION_MEMORY, 0
 | allocate a block of size d0 returning it in a0. if no room then zero is returned
 | and zero set in cc
 
-memoryalloc:	debugprint "memoryalloc called with", SECTION_MEMORY, REG_D0
+memoryalloc:	debugprint "memoryalloc called", SECTION_MEMORY, REG_D0
 		movem.l %d1/%a1,-(%sp)
 		add.l #MEM_SIZE,%d0		| add the overheard to the request
 		movea.l #HEAP_START,%a0		| start at the start of the heap
@@ -60,7 +60,7 @@ _blockfitso:	adda.l #MEM_SIZE,%a0		| and header offset, caller..
 
 | frees the block - passed a block pointer in a0 as obtained from memoryalloc
 
-memoryfree:	debugprint "memoryfree called with", SECTION_MEMORY, REG_A0
+memoryfree:	debugprint "memoryfree called", SECTION_MEMORY, REG_A0
 		movem.l %d0/%a1,-(%sp)
 		suba.l #MEM_SIZE,%a0		| go back the size of the struct
 		move.w #1,(MEM_FREE,%a0)		| mark it as free

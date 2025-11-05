@@ -29,7 +29,25 @@ member		NODE_NEXT,4
 member		NODE_PREV,4
 structend	NODE_SIZE
 
-| system vars
+| task struct offsets - stack proceeds the list node and other fields
+
+structstart	0
+member		TASK_SP,4
+member		TASK_START_PC,4
+structend	TASK_SIZE
+
+		.equ STACK_SIZE, 1024
+
+| task stack offsets
+
+structstart	0
+member		STACKED_REGS,4*8*1
+member		STACKED_SR,2
+member		STACKED_PC,4
+member		STACKED_FORMAT_VECTOR,2
+structend	STACKED_SIZE
+
+| system constants
 
 		.equ HEAP_START, 0x00010000	| 64KB in
 		.equ HEAP_LENGTH, 0x00080000	| 512KB
@@ -56,5 +74,8 @@ structend	NODE_SIZE
 
 		.equ SECTION_MEMORY, (1 << 0)
 		.equ SECTION_LISTS, (1 << 1)
+		.equ SECTION_TASKS, (1 << 2)
 
-		.equ DEBUG_SECTIONS, (SECTION_MEMORY+SECTION_LISTS)
+		.equ DEBUG_SECTIONS, (SECTION_MEMORY+SECTION_LISTS+SECTION_TASKS)
+|		.equ DEBUG_SECTIONS, 0
+

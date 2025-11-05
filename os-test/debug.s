@@ -1,6 +1,7 @@
 		.include "include/system.i"
 
 		.global memorydump
+		.global taskdump
 		.global printbuffer
 
 		.global d0msg
@@ -23,6 +24,7 @@
 
 		.global memorymsg
 		.global listsmsg
+		.global tasksmsg
 
 		.section .text
 		.align 2
@@ -70,10 +72,33 @@ memorydump:	movea.l #HEAP_START,%a2		| get the start of the heap
 		bne 1b				| ... back for more
 		rts
 
+taskdump:	move.l %a0,%a2
+
+		lea (printbuffer,%pc),%a0	| start of print buffer
+		lea (startpcmsg,%pc),%a1	| inital pc label
+		move.l (TASK_START_PC,%a2),%d0	| get the initial pc
+		movea.l #longtoascii,%a6	| printing a long for d0
+		bsr labandint			| print them into a0
+		lea (printbuffer,%pc),%a0	| wind buffer back
+		bsr conputstr			| and print it
+
+		lea (printbuffer,%pc),%a0	| start of print buffer
+		lea (spmsg,%pc),%a1		| sp label
+		move.l (TASK_SP,%a2),%d0	| get the current block pointer
+		movea.l #longtoascii,%a6	| printing a long for d0
+		bsr labandint			| print them into a0
+		lea (printbuffer,%pc),%a0	| wind buffer back
+		bsr conputstr			| and print it
+
+		rts
+
 thismsg:	.asciz "This: "
 nextmsg:	.asciz "Next: "
 lengthmsg:	.asciz "Length: "
 freemsg:	.asciz "Free: "
+
+startpcmsg:	.asciz "Initial PC: "
+spmsg:		.asciz "SP: "
 
 d0msg:		.asciz " D0="
 d1msg:		.asciz " D1="
@@ -95,6 +120,7 @@ a7msg:		.asciz " A7="
 
 memorymsg:	.asciz "MEMORY: "
 listsmsg:	.asciz "LISTS: "
+tasksmsg:	.asciz "TASKS: "
 
 		.section .bss
 		.align 2
