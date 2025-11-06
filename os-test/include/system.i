@@ -34,18 +34,26 @@ structend	NODE_SIZE
 structstart	0
 member		TASK_SP,4
 member		TASK_START_PC,4
+member		TASK_PC,4
+member		TASK_SR,2
+member		TASK_FORMAT_VECTOR,2
 structend	TASK_SIZE
 
-		.equ STACK_SIZE, 1024
+		.equ USTACK_SIZE, 1024
+		.equ SSTACK_SIZE, 1024
 
 | task stack offsets
 
 structstart	0
-member		STACKED_REGS,4*8*1
-member		STACKED_SR,2
-member		STACKED_PC,4
-member		STACKED_FORMAT_VECTOR,2
-structend	STACKED_SIZE
+member		UREGS_DA,4*(8+7)
+structend	UREGS_SIZE
+
+structstart	0
+member		SREGS_SR,2
+member		SREGS_PC,4
+member		SREGS_FORMAT_VECTOR,2
+structend	SREGS_SIZE
+
 
 | system constants
 

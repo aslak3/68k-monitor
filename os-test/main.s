@@ -7,6 +7,7 @@
 
 		.global readytasks
 		.global currenttask
+		.global superstack
 
 structstart	NODE_SIZE
 member		TEST_TEXT,32
@@ -134,7 +135,8 @@ _taskdump:	move.l (0*4,%a1),%a0
 		bsr taskdump
 		rts
 
-_taskrun:	jmp _starttask
+_taskrun:	move.l #superstack+SSTACK_SIZE,%sp
+		jmp _starttask
 
 testtaskcode:	lea (testmessage,%pc),%a0
 		bsr conputstr
@@ -150,3 +152,4 @@ testlist:	.space LIST_SIZE
 readytasks:	.space LIST_SIZE
 currenttask:	.long 0
 
+superstack:	.space SSTACK_SIZE
