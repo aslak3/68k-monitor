@@ -125,13 +125,15 @@ _listdumpo:	rts
 
 _tasktest:	move.l #superstack+SSTACK_SIZE,%sp
 
-		movea.l #readytasks,%a0
+		movea.l #readytasks,%a1
 		bsr listinit
 
-		movea.l #testtaskcode,%a0
-		bsr newtask
+		movea.l #testtaskcode1,%a0
+		bsr createtask
 
-		move.l %a0,currenttask
+		movea.l #testtaskcode2,%a0
+		bsr createtask
+
 		jmp _starttask
 
 _taskdump:	move.l (0*4,%a1),%a0
@@ -141,11 +143,20 @@ _taskdump:	move.l (0*4,%a1),%a0
 _tickerinit:	bsr tickerinit
 		rts
 
-testtaskcode:	lea (testmessage,%pc),%a0
+testtaskcode1:	lea (testmessage1,%pc),%a0
+		| forbid
 		bsr conputstr
-		bra testtaskcode
+		| permit
+		bra testtaskcode1
 
-testmessage:	.asciz "Hello from test task!!\r\n"
+testtaskcode2:	lea (testmessage2,%pc),%a0
+		| forbid
+		bsr conputstr
+		| permit
+		bra testtaskcode2
+
+testmessage1:	.asciz "Hello from test task ONE!!\r\n"
+testmessage2:	.asciz "Hello from test task TWO!!\r\n"
 
 		.section .bss
 		.align 4

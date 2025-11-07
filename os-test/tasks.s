@@ -1,22 +1,24 @@
 		.include "include/system.i"
 		.include "../include/hardware.i"
 
-		.section .rodata
-		.align 4
+		.section .text
+		.align 2
 
 		.global createtask
 		.global newtask
 		.global tickerhandler
 		.global _starttask
 
+		.global permitted
+
 | creates a task with the intital pc in a0 and make it ready to run
 
 createtask:	debugprint "createtask called with initial pc", SECTION_TASKS, REG_A0
-		movem.l %a0,-(%sp)
+		movem.l %a1,-(%sp)
 		bsr newtask			| create the task in a0
 		move.l #readytasks,%a1		| get the ready queue
 		bsr addtail			| add it
-		movem.l (%sp)+,%a0
+		movem.l (%sp)+,%a1
 		rts
 
 | the lowest level, used for making a "bare" task, like the idler and init,
@@ -45,10 +47,10 @@ newtask:	debugprint "newtask called with initial pc", SECTION_TASKS, REG_A0
 
 | make task in currenttask the current task
 
-tickerhandler:	move.b #1,TIMERCONTROL
-		tst.w permitted
-		bne 1f
-		rte
+tickerhandler:	move.b #1,TIMERCONTROL		| clear the interrupt regardless
+		tst.w permitted			| are we multitasking?
+		bne 1f				| if we are then skip the return
+		rte				| otherwise we are finished already
 
 1:		move.l %sp,sspcopy		| save our current ssp
 		movec %usp,%sp			| use the user sp temporarily
@@ -66,10 +68,14 @@ tickerhandler:	move.b #1,TIMERCONTROL
 		move.w SREGS_FORMAT_VECTOR(%sp),TASK_FORMAT_VECTOR(%a0)
 						| and the format/vector code
 
-||||| schedular here
+||||| schedule the next task to run, which might be the only ready task
 
-_starttask:	move.l %a0,currenttask
-		move.w #1,permitted
+		move.l #readytasks,%a1		| get the ready queue of tasks
+		bsr remhead			| take the current task off the head
+		bsr addtail			| and add it to the tail, rotating the queue
+
+_starttask:	move.l %a0,currenttask		| save the current task
+		move.w #1,permitted		| now the ticker handler can complete
 		lea -SREGS_SIZE(%sp),%sp	| move back the size of the frame
 		move.w TASK_SR(%a0),SREGS_SR(%sp)
 						| load SR into ssp from the task struct

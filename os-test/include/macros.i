@@ -21,6 +21,14 @@
 		ori #0x0700,%sr
 .endm
 
+.macro permit
+		move.w #1,permitted
+.endm
+
+.macro forbid
+		clr.w permitted
+.endm
+
 .macro debugreg label, reg
 		movem.l %d0/%a0,-(%sp)
 		move.l \reg,-(%sp)

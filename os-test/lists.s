@@ -17,6 +17,7 @@ listinit:	debugprint "listinit called", SECTION_LISTS, REG_A1
 		lea.l LIST_HEAD(%a1),%a0	| calc the head none address
 		move.l %a0,LIST_TAILPREV(%a1)	| set the dummy tail prev
 		movem.l (%sp)+,%a0
+		debugprint "listinit finished", SECTION_LISTS, 0
 		rts
 
 | adds node at a0 to list in a1 to the head of the list

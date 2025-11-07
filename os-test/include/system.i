@@ -32,6 +32,7 @@ structend	NODE_SIZE
 | task struct offsets - stack proceeds the list node and other fields
 
 structstart	0
+member		TASK_NODE,NODE_SIZE
 member		TASK_SP,4
 member		TASK_START_PC,4
 member		TASK_PC,4
@@ -84,6 +85,6 @@ structend	SREGS_SIZE
 		.equ SECTION_LISTS, (1 << 1)
 		.equ SECTION_TASKS, (1 << 2)
 
-		.equ DEBUG_SECTIONS, (SECTION_MEMORY+SECTION_LISTS+SECTION_TASKS)
-|		.equ DEBUG_SECTIONS, 0
+|		.equ DEBUG_SECTIONS, (SECTION_MEMORY+SECTION_LISTS+SECTION_TASKS)
+		.equ DEBUG_SECTIONS, 0
 
