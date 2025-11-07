@@ -6,6 +6,7 @@
 
 		.global createtask
 		.global newtask
+		.global tickerhandler
 		.global _starttask
 
 | creates a task with the intital pc in a0 and make it ready to run
@@ -44,9 +45,31 @@ newtask:	debugprint "newtask called with initial pc", SECTION_TASKS, REG_A0
 
 | make task in currenttask the current task
 
-schedule:	movem.l %d0-%d7,-(%sp)		| stack all the registers for current task
-_starttask:	move.l currenttask,%a0		| get the current task
-		debugprint "_starttask called with task", SECTION_TASKS, REG_A0
+tickerhandler:	move.b #1,TIMERCONTROL
+		tst.w permitted
+		bne 1f
+		rte
+
+1:		move.l %sp,sspcopy		| save our current ssp
+		movec %usp,%sp			| use the user sp temporarily
+		movem.l %d0-%d7/%a0-%a6,-(%sp)	| stack the task state into user stack
+		move.l sspcopy,%sp		| restore the old ssp
+
+		move.l currenttask,%a0		| get the current task pointer
+
+		move.l %usp,%a1			| get the current usp again ...
+		move.l %a1,TASK_SP(%a0)		| ... so we can save it in the task struct
+		move.w SREGS_SR(%sp),TASK_SR(%a0)
+						| load SR from ssp into the task struct
+		move.l SREGS_PC(%sp),TASK_PC(%a0)
+						| and the pc
+		move.w SREGS_FORMAT_VECTOR(%sp),TASK_FORMAT_VECTOR(%a0)
+						| and the format/vector code
+
+||||| schedular here
+
+_starttask:	move.l %a0,currenttask
+		move.w #1,permitted
 		lea -SREGS_SIZE(%sp),%sp	| move back the size of the frame
 		move.w TASK_SR(%a0),SREGS_SR(%sp)
 						| load SR into ssp from the task struct
@@ -54,7 +77,13 @@ _starttask:	move.l currenttask,%a0		| get the current task
 						| and the pc
 		move.w TASK_FORMAT_VECTOR(%a0),SREGS_FORMAT_VECTOR(%sp)
 						| and the format/vector code
-		move.l TASK_SP(%a0),%a0		| get the new task's sp
-		movec %a0,%usp			| load the user stack pointer
-		movem.l (%a0),%d0-%d7/%a0-%a6	| unstack all the registers for new task
+		move.l TASK_SP(%a0),%a1		| get the new task's sp
+		movec %a1,%usp			| load the user stack pointer
+		movem.l (%a1)+,%d0-%d7/%a0-%a6	| unstack all the registers for new task
 		rte				| run this task's user code via 4 word stack
+
+		.section .bss
+		.align 4
+
+sspcopy:	.long 0
+permitted:	.word 0

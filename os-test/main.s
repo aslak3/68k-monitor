@@ -27,8 +27,9 @@ commandarray:   nocheckcommand "_memoryinit"
 		nocheckcommand "_listdump"
 
 		nocheckcommand "_tasktest"
-		nocheckcommand "_taskrun"
 		checkcommand "_taskdump", 3
+
+		nocheckcommand "_tickerinit"
 
 		endcommand 0x0
 
@@ -122,21 +123,23 @@ _listdumploop:	tst (NODE_NEXT,%a2)
 		bra _listdumploop
 _listdumpo:	rts
 
-_tasktest:	movea.l #readytasks,%a0
+_tasktest:	move.l #superstack+SSTACK_SIZE,%sp
+
+		movea.l #readytasks,%a0
 		bsr listinit
 
 		movea.l #testtaskcode,%a0
 		bsr newtask
 
 		move.l %a0,currenttask
-		rts
+		jmp _starttask
 
 _taskdump:	move.l (0*4,%a1),%a0
 		bsr taskdump
 		rts
 
-_taskrun:	move.l #superstack+SSTACK_SIZE,%sp
-		jmp _starttask
+_tickerinit:	bsr tickerinit
+		rts
 
 testtaskcode:	lea (testmessage,%pc),%a0
 		bsr conputstr

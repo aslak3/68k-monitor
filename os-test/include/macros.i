@@ -13,6 +13,14 @@
 		.equ \lab, structrunning
 .endm
 
+.macro enableints
+		andi #0xf8ff,%sr
+.endm
+
+.macro disableints
+		ori #0x0700,%sr
+.endm
+
 .macro debugreg label, reg
 		movem.l %d0/%a0,-(%sp)
 		move.l \reg,-(%sp)

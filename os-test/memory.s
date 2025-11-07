@@ -42,7 +42,7 @@ _checkfree:	cmp.l (MEM_LENGTH,%a0),%d0	| compare with size requested
 		ble _blockfits			| it fits!
 		bra _checknext			| back to check the next one
 
-_blockfits:	move.w #0,(MEM_FREE,%a0)		| this block isn't free
+_blockfits:	move.w #0,(MEM_FREE,%a0)	| this block isn't free
 		move.l (MEM_LENGTH,%a0),%d1	| get the size of this block in d1
 		move.l %d0,(MEM_LENGTH,%a0)	| and set the now nonfree block size
 		movea.l %a0,%a1			| non free block in a0, new in a1
@@ -53,7 +53,7 @@ _blockfits:	move.w #0,(MEM_FREE,%a0)		| this block isn't free
 		movea.l (MEM_NEXT,%a0),%a2	| get the original next block
 		move.l %a1,(MEM_NEXT,%a0)	| link the now non free block to new freee
 		move.l %d1,(MEM_LENGTH,%a1)	| save the new free size
-		move.w #1,(MEM_FREE,%a1)		| set the new free block as free
+		move.w #1,(MEM_FREE,%a1)	| set the new free block as free
 		move.l %a2,(MEM_NEXT,%a1)	| link the new free block to the one after
 _blockfitso:	adda.l #MEM_SIZE,%a0		| and header offset, caller..
 		bra _allocout			| gets only the useable space
