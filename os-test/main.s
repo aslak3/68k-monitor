@@ -144,19 +144,27 @@ _tickerinit:	bsr tickerinit
 		rts
 
 testtaskcode1:	lea (testmessage1,%pc),%a0
-		| forbid
+		forbid
 		bsr conputstr
-		| permit
+		permit
+		move.w #0x000f,%d1
+2:		move.w #0xfff0,%d0
+1:		dbra %d0,1b
+		dbra %d1,2b
 		bra testtaskcode1
 
 testtaskcode2:	lea (testmessage2,%pc),%a0
-		| forbid
+		forbid
 		bsr conputstr
-		| permit
+		permit
+		move.w #0x000f,%d1
+2:		move.w #0xfff0,%d0
+1:		dbra %d0,1b
+		dbra %d1,2b
 		bra testtaskcode2
 
-testmessage1:	.asciz "Hello from test task ONE!!\r\n"
-testmessage2:	.asciz "Hello from test task TWO!!\r\n"
+testmessage1:	.asciz "ONE!!\r\n"
+testmessage2:	.asciz "TWO!!\r\n"
 
 		.section .bss
 		.align 4

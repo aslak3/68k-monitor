@@ -74,6 +74,8 @@ tickerhandler:	move.b #1,TIMERCONTROL		| clear the interrupt regardless
 		bsr remhead			| take the current task off the head
 		bsr addtail			| and add it to the tail, rotating the queue
 
+		not LED				| flash the LED if scheduling
+
 _starttask:	move.l %a0,currenttask		| save the current task
 		move.w #1,permitted		| now the ticker handler can complete
 		lea -SREGS_SIZE(%sp),%sp	| move back the size of the frame
