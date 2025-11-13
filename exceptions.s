@@ -47,16 +47,16 @@ fline:		lea (flinemsg,%pc),%a0
 		movea.l #portadevice,%a5
 		bsr serputstr
 		movea.l #buffer,%a0
-		lea (srmsg,%pc),%a1
-		bsr strconcat
+		lea (srmsg,%pc),%a0
+		bsr serputstr
 		move.w (0,%sp),%d0
-		bsr wordtoascii
-		lea (spacesmsg,%pc),%a1
-		bsr strconcat
-		lea (pcmsg,%pc),%a1
-		bsr strconcat
+		bsr serputword
+		lea (spacesmsg,%pc),%a0
+		bsr serputstr
+		lea (pcmsg,%pc),%a0
+		bsr serputstr
 		move.l (2,%sp),%d0
-		bsr longtoascii
+		bsr serputlong
 		lea (newlinemsg,%pc),%a1
 		bsr strconcat
 		movea.l #buffer,%a0

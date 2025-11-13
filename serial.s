@@ -5,6 +5,8 @@
 		.align 2
 
 		.global serialinit
+		.global serputchar
+		.global setgetchar
 		.global serputstr
 		.global sergetstr
 
@@ -36,6 +38,16 @@ serialinit:	move.b #0x05,CR26C94+BASEPA	| enable tx and rx
 		move.b #0xcc,CSR26C94+BASEPB	| 38.4kbaud
 		rts
 
+| puts the char in d0 to the device in a5
+
+serputchar:	jmp ([PUT_FUNC,%a5])		| JUMP to the putting function
+
+| gets the char into d0 from the device in a5
+
+sergetchar:	jmp ([GET_FUNC,%a5])		| JUMP to the getting function
+
+| puts the string in a0 to the device in a5
+
 serputstr:	move.w %d0,-(%sp)
 1:		move.b (%a0)+,%d0		| get the byte to put
 		beq 2f				| end of message,done
@@ -44,7 +56,7 @@ serputstr:	move.w %d0,-(%sp)
 2:		move.w (%sp)+,%d0
 		rts
 
-| get a str in a0 from the device in a6
+| get a str in a0 from the device in a5
 
 sergetstr:	movem.l %d0-%d1/%a0,-(%sp)	
 		clr.w %d1			| set the length to 0

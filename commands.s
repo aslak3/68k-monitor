@@ -4,7 +4,6 @@
 		.include "include/hardware.i"
 
 		.global commandarray
-		.global printbuffer
 		.global clear
 		.global testtextmode
 
@@ -45,26 +44,21 @@ commandarray:	checkcommand "readbyte", 3
 
 readbyte:	movea.l (0,%a1),%a0		| get the first argument
 		move.b (%a0),%d0		| get the byte at that addr
-		movea.l #printbuffer,%a0	| set the output buffer
-		bsr bytetoascii			| convert into a0
-		bra readcommon			| add newline and print
+		bsr serputbyte			| convert to byte and print
+		bra readcommon			| add newline
 
 readword:	movea.l (0,%a1),%a0		| get the first argument
 		move.w (%a0),%d0		| get the word at that addr
-		movea.l #printbuffer,%a0	| set the output buffer
-		bsr wordtoascii			| convert into a0
-		bra readcommon			| add newline and print
+		bsr serputword			| convert to long and print
+		bra readcommon			| add newline
 
 readlong:	movea.l (0,%a1),%a0		| get the first argument
 		move.l (%a0),%d0		| get the long at that addr
-		movea.l #printbuffer,%a0	| set the output buffer
-		bsr longtoascii			| convert into a0
+		bsr serputlong			| convert to long and print
 		bra readcommon			| add newline and print
 
-readcommon:	lea (newlinemsg,%pc),%a1	| need a newline
-		bsr strconcat			| add it
-		movea.l #printbuffer,%a0	| wind buffer back
-		bsr serputstr			| and print it
+readcommon:	lea (newlinemsg,%pc),%a0	| need a newline
+		bsr serputstr			| output it
 		rts
 
 | dump out (in words) from the first argument the length, the second
@@ -84,48 +78,49 @@ dump:		movea.l (0*4,%a1),%a2		| get the start addr (a2)
 
 | print the address first.
 
-1:		movea.l #printbuffer,%a0	| setup the print buffer
+1:		move.l %a2,%d0			| we need to convert the ...
+		bsr serputlong			| ... current address
 
-		move.l %a2,%d0			| we need to convert the ...
-		bsr longtoascii			| ... current address
-
-		move.b #ASC_SP,(%a0)+		| add a space
-		move.b #ASC_SP,(%a0)+		| add another space
+		move.b #ASC_SP,%d0		| we need to add some spaces
+		bsr serputchar			| add one
+		bsr serputchar			| and another
 
 | now the 16 bytes, in groups of words
 
 		move.w #8-1,%d2			| 8 words across
 		clr.w %d3			| up counter of words
 2:		move.w (%d3.w,%a2),%d0		| read the word
-		bsr wordtoascii			| add it to the output
-		move.b #ASC_SP,(%a0)+		| add a space
+		bsr serputword			| add it to the output
+		move.b #ASC_SP,%d0		| add a space
+		bsr serputchar			| and print it
 		cmp.w #4,%d2			| look for middle word
 		bne 3f				| no extra space
-		move.b #ASC_SP,(%a0)+		| add a extra space
+		move.b #ASC_SP,%d0		| add a space
+		bsr serputchar			| and print it
 3:		addq.w #2,%d3			| inc, in words, up counter
 		dbra %d2,2b			| more words?
 
-		move.b #ASC_SP,(%a0)+		| only need one space
-
+		move.b #ASC_SP,%d0		| add a space
+		bsr serputchar			| and print it
+		
 | ascii display
 
-		move.b #'[',(%a0)+		| add a bracket
+		move.b #'[',%d0			| add a bracket
+		bsr serputchar			| print
 		move.w #16-1,%d2		| 16 bytes (chars) to print
 		clr.w %d3			| up counter of words
 4:		move.b (%d3.w,%a2),%d0		| read the byte
 		bsr makecharprint		| convert it to dot?
-		move.b %d0,(%a0)+		| add it to the stream
+		bsr serputchar			| print it out
 		addq.w #1,%d3			| inc up counter
 		dbra %d2,4b			| more ascii?
-		move.b #']',(%a0)+		| close the brackets
+		move.b #']',%d0			| close the brackets
+		bsr serputchar			| and print it
 
 | finish up and print the line
 
-		lea.l (newlinemsg,%pc),%a1	| finish with ...
-		bsr strconcat			| ... a new line
-
-		movea.l #printbuffer,%a0	| now we can ...
-		bsr serputstr			| ... print this line!
+		lea.l (newlinemsg,%pc),%a0	| finish with ...
+		bsr serputstr			| ... a new line
 
 		adda.l #0x10,%a2		| move to next chunk
 		sub.l #0x10,%d1			| adjust the byte count
@@ -173,23 +168,18 @@ writelongs:	bsr writeprelim			| setup
 parsertest:	movea.l %a0,%a2			| arg type table into a2
 1:		move.w (%a2)+,%d0		| get the current type
 		beq 2f				| end of list?
-		movea.l #printbuffer,%a0	| start of print buffer
-		lea (typemsg,%pc),%a1		| add the type label
-		bsr strconcat			| ...
-		bsr wordtoascii			| convert d0 and append
-		lea (spacesmsg,%pc),%a1		| add a space
-		bsr strconcat			| ...
-
-		lea (valuemsg,%pc),%a1		| value label
+		lea (typemsg,%pc),%a0		| add the type label
+		bsr serputstr			| ...
+		bsr serputword			| convert d0 and append
+		move.b #ASC_SP,%d0		| add a space
+		bsr serputchar			| and print it
+		lea (valuemsg,%pc),%a0		| value label
 		bsr strconcat			| add it
 		move.l (%a3)+,%d0		| get the value
-		bsr longtoascii			| add the value to a0
+		bsr serputlong			| add the value to a0
 
-		lea (newlinemsg,%pc),%a1	| end with a newline
-		bsr strconcat			| append it
-
-		movea.l #printbuffer,%a0	| wind a0 back to start
-		bsr serputstr			| and print it
+		lea (newlinemsg,%pc),%a0	| end with a newline
+		bsr serputstr			| append it
 
 		bra 1b
 
@@ -249,11 +239,8 @@ testtransmit:	bsr ne2k_setup
 		rts
 
 showticks:	move.l timerticks,%d0
-		movea.l #printbuffer,%a0	| set the output buffer
-		bsr longtoascii			| convert into a0
-		lea (newlinemsg,%pc),%a1	| need a newline
-		bsr strconcat			| add it
-		movea.l #printbuffer,%a0	| wind buffer back
+		bsr serputlong			| convert into a0
+		lea (newlinemsg,%pc),%a0	| need a newline
 		bsr serputstr			| and print it
 		rts
 
@@ -294,11 +281,8 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		clr.l %d0			| clear sum
 1:		add.l (%a0)+,%d0		| sum it
 		dbra %d1,1b			| back for more
-		movea.l #printbuffer,%a0	| set the output buffer
-		bsr longtoascii			| convert into a0
+		bsr serputlong			| convert into a0
 		lea (newlinemsg,%pc),%a1	| need a newline
-		bsr strconcat			| add it
-		movea.l #printbuffer,%a0	| wind buffer back
 		bsr serputstr			| and print it
 		rts
 
@@ -306,6 +290,3 @@ filesizemsg:	.asciz "File size: "
 
 		.section .bss
 		.align 2
-
-printbuffer:	.space 256
-temp:		.long

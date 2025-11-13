@@ -1,57 +1,52 @@
 		.section .text
 		.align 2
 
-		.global bytetoascii
-		.global wordtoascii
-		.global longtoascii
+		.global serputbyte
+		.global serputword
+		.global serputlong
 		.global asciitoint
 		.global strcmp
 		.global strmatcharray
 		.global strconcat
 		.global makecharprint
 		.global toupper
-		.global labandint
 
-| convert the byte in d0 to hex, writing it into a0 and advancing it 2
-| bytes. d0.w is retained
+| convert the byte in d0 to hex, printing on the function in a5. d0.w is retained
 
-bytetoascii:	move.w %d0,-(%sp)		| save d0
+serputbyte:	move.w %d0,-(%sp)		| save d0
 		lsr.b #4,%d0			| get the left most nybble
 		cmp.b #10,%d0			| less then 10?
 		blt 1f				| yes, only add to 0
 		add.b #'a-'0-10,%d0		| add past 'a', but less '0'
 1:		add.b #'0,%d0			| add '0' too
-		move.b %d0,(%a0)+		| save the nybble
+		bsr serputchar			| output that char
 		move.w (%sp),%d0		| get the byte back
 		and.b #0x0f,%d0			| mask off the left nybble
 		cmp.b #10,%d0			| less then 10?
 		blt 2f				| yes, only add to 0
 		add.b #'a-'0-10,%d0		| add past 'a', but less '0'
 2:		add.b #'0,%d0			| add '0' too
-		move.b %d0,(%a0)+		| save the nybble
-		move.b #0,(%a0)			| add null but dont advance
+		bsr serputchar			| output that char
 		move.w (%sp)+,%d0		| get the byte back
 		rts
 
-| convert the word in d0 to hex, writing it into a0 and advancing it 4
-| bytes. d0.w is retained
+| convert the word in d0 to hex, outputting it with the sub at a5. d0.w is retained
 
-wordtoascii:	move.w %d0,-(%sp)
+serputword:	move.w %d0,-(%sp)
 		lsr.w #8,%d0			| high byte at low byte pos
-		bsr bytetoascii			| convert that byte
+		bsr serputbyte			| convert that byte
 		move.w (%sp),%d0		| get byte back
-		bsr bytetoascii			| convert the low byte
+		bsr serputbyte			| convert the low byte
 		move.w (%sp)+,%d0
 		rts
 
-| convert the long in d0 to hex, writing it into a0 and advancing it 8
-| bytes. d0.l is retained
+| convert the long in d0 to hex, outputting it with the sub at a5. d0.l is retained
 
-longtoascii:	move.l %d0,-(%sp)
+serputlong:	move.l %d0,-(%sp)
 		swap %d0			| exchange halves
-		bsr wordtoascii			| convert the high word
+		bsr serputword			| convert the high word
 		move.l (%sp),%d0		| get the low half
-		bsr wordtoascii			| convert the low word
+		bsr serputword			| convert the low word
 		move.l (%sp)+,%d0
 		rts
 
@@ -176,10 +171,3 @@ toupper:	cmp.b #'a,%d0			| compare with "a"
 		sub.b #'a-'A,%d0		| convert to uppercase
 1:		rts
 
-| puts the label in a1 with d0 printed by the routine in a5 into a0
-
-labandint:	bsr strconcat			| add the label to a0
-		jsr (%a5)			| use the passed routine to format
-		lea (newlinemsg,%pc),%a1	| need a newline
-		bsr strconcat			| add it
-		rts
