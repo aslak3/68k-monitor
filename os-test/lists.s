@@ -49,12 +49,13 @@ addtail:	debugprint "addtail called", SECTION_LISTS, (REG_A0+REG_A1)
 
 remhead:	debugprint "remhead called", SECTION_LISTS, REG_A1
 		movem.l %a2,-(%sp)
-		movea.l LIST_HEAD(%a1),%a0	| get the current head node
-		movea.l NODE_NEXT(%a0),%a2	| get that node's next (real) node
-		tst.l %a2			| need to see if list empty
+		movea.l LIST_HEAD(%a1),%a2	| get the current head node
+		movea.l NODE_NEXT(%a2),%a0	| get that node's next (real) node
+		tst.l %a0			| need to see if list empty
 		beq _remheado			| if already empty, do nothing
-		move.l %a2,LIST_HEAD(%a1)	| make this the new head
-		move.l %a1,NODE_PREV(%a2)	| and make this nodes prev the head
+		move.l %a0,LIST_HEAD(%a1)	| make this the new head
+		move.l %a1,NODE_PREV(%a0)	| and make this nodes prev the head
+		exg %a2,%a0
 _remheado:	movem.l (%sp)+,%a2
 		debugprint "removed head node" SECTION_LISTS, REG_A0
 		rts
@@ -63,14 +64,15 @@ _remheado:	movem.l (%sp)+,%a2
 
 remtail:	debugprint "remtail called", SECTION_LISTS, REG_A1
 		movem.l %a1-%a2,-(%sp)		| we are modifiying the list pointer
-		movea.l LIST_TAILPREV(%a1),%a0	| get the current head node
-		movea.l NODE_PREV(%a0),%a2	| get that node's prev
-		tst.l %a2			| need to see if list empty
-		beq _remtail			| if empty, nothing to do
-		move.l %a2,LIST_TAILPREV(%a1)	| make this the new tail
+		movea.l LIST_TAILPREV(%a1),%a2	| get the current head node
+		movea.l NODE_PREV(%a2),%a0	| get that node's prev
+		tst.l %a0			| need to see if list empty
+		beq _remtailo			| if empty, nothing to do
+		move.l %a0,LIST_TAILPREV(%a1)	| make this the new tail
 		adda.l #LIST_TAIL,%a1		| move to the tail end of header
-		move %a1,NODE_NEXT(%a2)		| and make this nodes next the tail
-_remtail:	movem.l (%sp)+,%a1-%a2		| restore u and y
+		move.l %a1,NODE_NEXT(%a0)		| and make this nodes next the tail
+		exg %a2,%a0
+_remtailo:	movem.l (%sp)+,%a1-%a2		| restore u and y
 		debugprint "removed tail node" SECTION_LISTS, REG_A0
 		rts
 

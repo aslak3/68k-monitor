@@ -71,14 +71,13 @@ tickerhandler:	move.b #1,TIMERCONTROL		| clear the interrupt regardless
 ||||| schedule the next task to run, which might be the only ready task
 
 		move.l #readytasks,%a1		| get the ready queue of tasks
-		bsr remhead			| take the current task off the head
-		bsr addtail			| and add it to the tail, rotating the queue
+		bsr remtail			| take the current task off the head
+		bsr addhead			| and add it to the tail, rotating the queue
 
-		not LED				| flash the LED if scheduling
+		not.b LED			| flash the LED if scheduling
 
 _starttask:	move.l %a0,currenttask		| save the current task
 		move.w #1,permitted		| now the ticker handler can complete
-		lea -SREGS_SIZE(%sp),%sp	| move back the size of the frame
 		move.w TASK_SR(%a0),SREGS_SR(%sp)
 						| load SR into ssp from the task struct
 		move.l TASK_PC(%a0),SREGS_PC(%sp)

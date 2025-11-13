@@ -12,7 +12,7 @@ OBJS = main.o memory.o lists.o debug.o tasks.o ticker.o
 all: $(BIN)
 
 %.o: %.s
-	$(AS) -mcpu=68030 -m68881 --fatal-warnings $< -o $@
+	$(AS) -g -mcpu=68030 -m68881 --fatal-warnings $< -o $@
 
 os-test.elf: $(OBJS)
 	$(LD) -T linker.scr $^ $(LIBS) -o $@
