@@ -31,7 +31,6 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "patternfillw" 3, 2
 		checkcommand "patternfillb" 3, 2
 		checkcommand "memfill", 3, 2, 2
-		checkcommand "download", 0x80, 3
 		nocheckcommand "memtest"
 		checkcommand "ethdl", 0x80, 3
 		endcommand 0x400		| table in ram?
@@ -43,7 +42,6 @@ commandarray:	checkcommand "readbyte", 3
 | value (long) array.
 
 | read the byte, word or long at the first argument and display it.
-
 
 readbyte:	movea.l (0,%a1),%a0		| get the first argument
 		move.b (%a0),%d0		| get the byte at that addr
@@ -66,7 +64,7 @@ readlong:	movea.l (0,%a1),%a0		| get the first argument
 readcommon:	lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat			| add it
 		movea.l #printbuffer,%a0	| wind buffer back
-		bsr conputstr			| and print it
+		bsr serputstr			| and print it
 		rts
 
 | dump out (in words) from the first argument the length, the second
@@ -127,7 +125,7 @@ dump:		movea.l (0*4,%a1),%a2		| get the start addr (a2)
 		bsr strconcat			| ... a new line
 
 		movea.l #printbuffer,%a0	| now we can ...
-		bsr conputstr			| ... print this line!
+		bsr serputstr			| ... print this line!
 
 		adda.l #0x10,%a2		| move to next chunk
 		sub.l #0x10,%d1			| adjust the byte count
@@ -191,7 +189,7 @@ parsertest:	movea.l %a0,%a2			| arg type table into a2
 		bsr strconcat			| append it
 
 		movea.l #printbuffer,%a0	| wind a0 back to start
-		bsr conputstr			| and print it
+		bsr serputstr			| and print it
 
 		bra 1b
 
@@ -209,7 +207,7 @@ valuemsg:       .asciz "Value: "
 		.align 2
 
 help:		lea (helpmsg,%pc),%a0		| get the help message
-		bsr conputstr			| print it
+		bsr serputstr			| print it
 		rts
 
 		.section .rodata
@@ -256,7 +254,7 @@ showticks:	move.l timerticks,%d0
 		lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat			| add it
 		movea.l #printbuffer,%a0	| wind buffer back
-		bsr conputstr			| and print it
+		bsr serputstr			| and print it
 		rts
 
 
@@ -301,66 +299,10 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat			| add it
 		movea.l #printbuffer,%a0	| wind buffer back
-		bsr conputstr			| and print it
+		bsr serputstr			| and print it
 		rts
-
-download:	movea.l (0*4,%a1),%a0
-		movea.l (1*4,%a1),%a2
-
-		move.b #1,%d0
-		bsr dlputchar
-		bsr dlputstr
-		clr.b %d0
-		bsr dlputchar
-
-		bsr dlgetchar			| ignore response for now
-
-		move.w #4-1,%d1
-		clr.l %d2
-1:		lsl.l #8,%d2
-		bsr dlgetchar
-		move.b %d0,%d2
-		dbra %d1,1b			| d2 now has length
-
-		movea.l #printbuffer,%a0	| wind a0 back to start
-		lea (filesizemsg,%pc),%a1	| value label
-		bsr strconcat			| add it
-		move.l %d2,%d0
-		bsr longtoascii			| add the value to a0
-
-		lea (newlinemsg,%pc),%a1	| end with a newline
-		bsr strconcat			| append it
-
-		movea.l #printbuffer,%a0	| wind a0 back to start
-		bsr conputstr			| and print it
-
-		move.b #1,%d0			| load the go signal
-		bsr dlputchar			| and send it
-
-2:		tst.l %d2
-		beq 4f
-
-		bsr dlgetchar
-		move.b %d0,(%a2)+		| save the read byte
-
-		tst.b %d2			| look at lowest byte
-		bne 3f				| not zero, don't print
-		move.b #'.,%d0			| print . every 256 bytes
-		bsr conputchar
-
-3:		subq.l #1,%d2
-		bra 2b
-
-4:		lea (newlinemsg,%pc),%a0	| end with a newline
-		bsr conputstr			| and print it
-
-		rts
-
-		.section .rodata
-		.align 2
 
 filesizemsg:	.asciz "File size: "
-
 
 		.section .bss
 		.align 2

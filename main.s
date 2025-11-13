@@ -36,14 +36,15 @@ start:		movea.l #0x01000000,%sp		| 16 MB
 		move.w #0x2000,%sr
 
 		move.b #0,LED
+		movea.l #portadevice,%a5
 
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
-		bsr conputstr			| ...
+		bsr serputstr			| ...
 
 		lea.l (entercmdmsg,%pc),%a0	| grab the greeting in a0
-		bsr conputstr			| send it
+		bsr serputstr			| send it
 		movea.l #inputbuffer,%a0	| set the input up
-		bsr congetstr			| read a line
+		bsr sergetstr			| read a line
 
 		movea.l #inputbuffer,%a0	| a0=input buffer
 		movea.l #cmdbuffer,%a1		| a1=command buffer
@@ -55,28 +56,28 @@ mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
 		movea.l #commandarray,%a0	| setup command array in a0
 		bsr strmatcharray		| match against cmd in a1
 		beq nocommand			| no command
-		move.l %d0,%a5			| move com data ptr to a5
+		move.l %d0,%a4			| move com data ptr to a5
 		movea.l #typebuffer,%a0		| retrivie the input types
-		move.l 4(%a5),%d0		| get the required types
+		move.l 4(%a4),%d0		| get the required types
 		beq 1f				| dont check if its null
 		move.l %d0,%a1			| move req types into a1
 		jsr checktypes			| check the types
 		bne badparams			| bad params check failed
-1:		movea.l (%a5),%a2		| address is first entry
+1:		movea.l (%a4),%a2		| address is first entry
 		movea.l %a3,%a1			| values in a1
 		jsr (%a2)			| run the comamnd sub
 		bra mainloop
 
 parsererror:	lea (parsererrormsg,%pc),%a0
-		bsr conputstr
+		bsr serputstr
 		bra mainloop
 
 badparams:	lea (badparamsmsg,%pc),%a0
-		bsr conputstr
+		bsr serputstr
 		bra mainloop
 
 nocommand:	lea (nocommandmsg,%pc),%a0
-		bsr conputstr
+		bsr serputstr
 		bra mainloop
 
 		.section .rodata

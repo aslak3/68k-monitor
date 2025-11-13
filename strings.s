@@ -176,10 +176,10 @@ toupper:	cmp.b #'a,%d0			| compare with "a"
 		sub.b #'a-'A,%d0		| convert to uppercase
 1:		rts
 
-| puts the label in a1 with d0 printed by the routine in a6 into a0
+| puts the label in a1 with d0 printed by the routine in a5 into a0
 
 labandint:	bsr strconcat			| add the label to a0
-		jsr (%a6)			| use the passed routine to format
+		jsr (%a5)			| use the passed routine to format
 		lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat			| add it
 		rts

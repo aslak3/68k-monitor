@@ -19,6 +19,8 @@ longswap:	ror.w #8,%d0			| swap the rightmost word
 		ror.w #8,%d0			| swap the rightmost word again
 		rts
 
+| print the label in a1 with the long in d0 to the device in a6
+
 labelprintlong:	movem.l %a0,-(%sp)
 		movea.l #printbuffer,%a0
 		bsr strconcat
@@ -26,7 +28,7 @@ labelprintlong:	movem.l %a0,-(%sp)
 		lea (newlinemsg,%pc),%a1	| need a newline
 		bsr strconcat
 		movea.l #printbuffer,%a0
-		bsr conputstr
+		bsr serputstr
 		movem.l (%sp)+,%a0
 		rts
 
