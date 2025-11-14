@@ -25,6 +25,7 @@
 		.global memorymsg
 		.global listsmsg
 		.global tasksmsg
+		.global debuggermsg
 
 		.section .text
 		.align 2
@@ -115,6 +116,7 @@ a7msg:		.asciz " A7="
 memorymsg:	.asciz "MEMORY: "
 listsmsg:	.asciz "LISTS: "
 tasksmsg:	.asciz "TASKS: "
+debuggermsg:	.asciz "DEBUGGER: "
 
 		.section .bss
 		.align 2

@@ -33,14 +33,25 @@
 		movem.l %d0/%a0,-(%sp)
 		move.l \reg,-(%sp)
 		lea (\label,%pc),%a0
-		bsr conputstr
+		bsr serputstr
 		move.l (%sp)+,%d0
-		lea (printbuffer,%pc),%a0
-		bsr longtoascii
-		lea (printbuffer,%pc),%a0
-		bsr conputstr
+		bsr serputlong
 		movem.l (%sp)+,%d0/%a0
 .endm
+
+.macro debugstr label, reg
+		movem.l %d0/%a0,-(%sp)
+		move.l \reg,-(%sp)
+		lea (\label,%pc),%a0
+		bsr serputstr
+		move.b #'[',%d0
+		bsr serputchar
+		move.l (%sp)+,%a0
+		bsr serputstr
+		move.b #']',%d0
+		bsr serputchar
+		movem.l (%sp)+,%d0/%a0
+.endm		
 
 .macro debugprint message, section, flags
 .if		\section & DEBUG_SECTIONS
@@ -50,22 +61,25 @@ _\@:		.asciz "\message"
 		.section .text
 		.align 2
 
+		movem.l %a5,-(%sp)
 		movem.l %a0-%a1,-(%sp)
+		movea.l #portadevice,%a5
 		lea (printbuffer,%pc),%a0
 .if		\section == SECTION_MEMORY
-		lea (memorymsg,%pc),%a1
+		lea (memorymsg,%pc),%a0
 .endif
 .if		\section == SECTION_LISTS
-		lea (listsmsg,%pc),%a1
+		lea (listsmsg,%pc),%a0
 .endif
 .if		\section == SECTION_TASKS
-		lea (tasksmsg,%pc),%a1
+		lea (tasksmsg,%pc),%a0
 .endif
-		bsr strconcat
-		lea (_\@,%pc),%a1
-		bsr strconcat
-		lea (printbuffer,%pc),%a0
-		bsr conputstr
+.if		\section == SECTION_DEBUGGER
+		lea (debuggermsg,%pc),%a0
+.endif
+		bsr serputstr
+		lea (_\@,%pc),%a0
+		bsr serputstr
 		movem.l (%sp)+,%a0-%a1
 
 .if		\flags & REG_D0
@@ -118,9 +132,35 @@ _\@:		.asciz "\message"
 		debugreg a7msg, %a7
 .endif
 
+.if		\flags & STR_A0
+		debugstr a0msg, %a0
+.endif
+.if		\flags & STR_A1
+		debugstr a1msg, %a1
+.endif
+.if		\flags & STR_A2
+		debugstr a2msg, %a2
+.endif
+.if		\flags & STR_A3
+		debugstr a3msg, %a3
+.endif
+.if		\flags & STR_A4
+		debugstr a4msg, %a4
+.endif
+.if		\flags & STR_A5
+		debugstr a5msg, %a5
+.endif
+.if		\flags & STR_A6
+		debugstr a6msg, %a6
+.endif
+.if		\flags & STR_A7
+		debugstr a7msg, %a7
+.endif
+
 		movem.l %a0,-(%sp)
 		lea (newlinemsg,%pc),%a0
-		bsr conputstr
+		bsr serputstr
 		movem.l (%sp)+,%a0
+		movem.l (%sp)+,%a5
 .endif
 .endm

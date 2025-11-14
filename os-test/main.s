@@ -32,6 +32,8 @@ commandarray:   nocheckcommand "_memoryinit"
 
 		nocheckcommand "_tickerinit"
 
+		nocheckcommand "_debugger"
+
 		endcommand 0x0
 
 		.section .text

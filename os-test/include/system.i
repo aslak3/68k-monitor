@@ -81,10 +81,20 @@ structend	SREGS_SIZE
 		.equ REG_A6, (1 << 14)
 		.equ REG_A7, (1 << 15)
 
+		.equ STR_A0, (1 << 16)
+		.equ STR_A1, (1 << 17)
+		.equ STR_A2, (1 << 18)
+		.equ STR_A3, (1 << 19)
+		.equ STR_A4, (1 << 20)
+		.equ STR_A5, (1 << 21)
+		.equ STR_A6, (1 << 22)
+		.equ STR_A7, (1 << 23)
+
 		.equ SECTION_MEMORY, (1 << 0)
 		.equ SECTION_LISTS, (1 << 1)
 		.equ SECTION_TASKS, (1 << 2)
+		.equ SECTION_DEBUGGER, (1 << 3)
 
-		| .equ DEBUG_SECTIONS, (SECTION_MEMORY+SECTION_LISTS+SECTION_TASKS)
-		.equ DEBUG_SECTIONS, 0
+		.equ DEBUG_SECTIONS, (SECTION_MEMORY+SECTION_LISTS+SECTION_TASKS+SECTION_DEBUGGER)
+		|.equ DEBUG_SECTIONS, 0
 

@@ -7,11 +7,11 @@ LIBS = -L/usr/lib/gcc-cross/m68k-linux-gnu/12/ -lgcc ../serial.o ../constants.o 
 ETH_SENDER = ../eth-sender/eth-sender
 
 BIN = os-test.bin
-OBJS = main.o memory.o lists.o debug.o tasks.o ticker.o
+OBJS = main.o memory.o lists.o debug.o tasks.o ticker.o debugger.o
 
 all: $(BIN)
 
-%.o: %.s
+%.o: %.s include/*.i
 	$(AS) -g -mcpu=68030 -m68881 --fatal-warnings $< -o $@
 
 os-test.elf: $(OBJS)
