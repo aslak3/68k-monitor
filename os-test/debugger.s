@@ -1,13 +1,17 @@
-		.include "../include/hardware.i"
 		.include "../include/macros.i"
-		.include "include/system.i"
+		.include "../include/system.i"
 
 		.global _debugger
 
 		.section .text
 		.align 2
 
-_debugger:	movea.l #portbdevice,%a5	| comms is via port b to gdb host
+		.equ REG_COUNT, 8*2
+
+_debugger:	move.l %sp,originalsp		| save stackpointer on entry
+		movem %d0-%d7/%a0-%a7,registers	| save all registers
+
+		movea.l #portbdevice,%a5	| comms is via port b to gdb host
 
 .loop:		debugprint "top of loop", SECTION_DEBUGGER, 0
 		bsr sergetchar			| get the latest byte, waiting as needed
@@ -31,16 +35,34 @@ _debugger:	movea.l #portbdevice,%a5	| comms is via port b to gdb host
 
 		movea.l #packetbody,%a0		| now we are comparing the packet
 		debugprint "got this packet", SECTION_DEBUGGER, STR_A0
-		movea.l #mustreplyempty,%a1	| to something
-		bsr strcmp			| see if we found it
-		beq sendempty			| jump there if we found it
-
-		bra .loop			| to the next packet!
-
-sendempty:	debugprint "sending an empty packet", SECTION_DEBUGGER, 0
-		movea.l #emptyreply,%a0		| nothing here
-		bsr putpacket			| send the markers and 00 checksum
+		move.b (%a0)+,%d0		| load d0 with first char of packet
+		cmp.b #'d',%d0			| looking for debug flag
+		beq .debugtoggle		| found it
+		cmp.b #'g',%d0			| looking for register dump
+		beq .registerread		| found it
+		cmp.b #'G',%d0			| looking register write
+		beq .registerwrite
 		bra .loop
+
+		movem registers,%d0-%d7/%a0-%a7	| restore all registers
+		rte
+
+
+.debugtoggle:	debugprint "inverting debug flag", SECTION_DEBUGGER, 0
+		not.w remotedebug		| invert the remote debug flag
+		bra .loop
+.registerread:	debugprint "dumping registers", SECTION_DEBUGGER, 0
+		movea.l #registers,%a1		| get start of register table
+		move.w #REG_COUNT-1,%d1		| count of registers
+1:		move.l (%a1)+,%d0		| get a register
+		bsr serputlong			| output it
+		dbra %d1,1b			| loop outputting all of them
+		bra .loop
+.registerwrite:	debugprint "setting registers", SECTION_DEBUGGER,0
+		movea.l #registers,%a1		| get start of register table
+		move.w #REG_COUNT-1,%d1		| count of registers
+1:		
+
 
 | sends the packet body in a0, with head and tail markers and checksum
 
@@ -74,3 +96,6 @@ emptyreply:	.asciz ""
 		.align 2
 
 packetbody:	.space 256
+remotedebug:	.word 0
+originalsp:	.long 0
+registers:	.space (8*2*4)

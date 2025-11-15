@@ -1,3 +1,5 @@
+		.include "../include/macros.i"
+		.include "../include/system.i"
 		.include "include/system.i"
 
 		.global listinit

@@ -1,15 +1,20 @@
-		.section .text
-		.align 2
+		.include "include/macros.i"
+		.include "include/system.i"
 
 		.global serputbyte
 		.global serputword
 		.global serputlong
 		.global asciitoint
+		.global asciitonybble
+		.global bytesfromascii
 		.global strcmp
 		.global strmatcharray
 		.global strconcat
 		.global makecharprint
 		.global toupper
+
+		.section .text
+		.align 2
 
 | convert the byte in d0 to hex, printing on the function in a5. d0.w is retained
 
@@ -71,35 +76,74 @@ two:		.byte 2				| 3
 | hold the type (1=byte, 2=word, 3=long). on error, d1 will be 0.
 | a0 will be moved to the first non printable char. sets zero on error.
 
-asciitoint:	movem.l %a1/%d2,-(%sp)
-		clr.l %d0			| set result to zero
-		move.w #0,%d1			| clear digit counter
-		bra 3f				| branch into loop
-1:		sub.b #'0,%d2			| subtract '0'
-		blt 4f				| <0? bad
-		cmp.b #0x09,%d2			| less then or equal to 9?
-		bls 2f				| yes? we are done with this
-		sub.b #'A'-':,%d2		| subtract diff 'A'-':'
-		blt 4f				| <0? bad
-		cmp.b #0x10,%d2			| see if it is uppercase
-		blt 2f				| was uppercase
-		sub.b #'a-'A,%d2		| was lowercase
-		cmp.b #0x10,%d2			| compare with upper range
-		bge 4f				| >15? bad
-2:		asl.l #4,%d0			| shift val to next nybble
-		add.b %d2,%d0			| accumulate number
-		add.b #1,%d1			| inc digit counter
+asciitoint:	debugprint "asciitoint", SECTION_MONITOR, 0
+		movem.l %d2/%a1,-(%sp)
+		clr.l %d2			| set result to zero
+		clr.w %d1			| clear digit counter
+0:		bsr asciitonybble		| convert the nybble into d0
+		beq 2f				| if error, then done
+1:		asl.l #4,%d2			| shift val to next nybble
+		add.b %d0,%d2			| accumulate number
+		debugprint "asciitoinit value now", SECTION_MONITOR, REG_D2
+		addq.b #1,%d1			| inc digit counter
+		move.b (%a0),%d0		| peek at the next byte
+		cmp.b #'!',%d0			| see if its a nowsp char
+		bls 3f				| yes? then done (good)
 		cmp.b #8,%d1			| too many digits?
-		bgt 4f				| yes? bad
-3:		move.b (%a0)+,%d2		| get the next character
-		cmp.b #'!,%d2			| see if it is a nonwsp char
-		bls 5f				| yes? then we are done
-		bra 1b				| back for more digits
-4:		move.b #0,%d1			| mark 0 digits
-5:		movea.l #datatypetable,%a1	| get start of table
+		blt 0b				| no? back for more
+2:		debugprint "asciitoint error", SECTION_MONITOR, 0
+		move.b #0,%d1			| mark 0 digits
+		bra 4f				| bad, clean up
+3:		movea.l #datatypetable,%a1	| get start of table
 		move.b (%d1.w,%a1),%d1		| translate to type
-		suba.l #1,%a0			| wind back to space char
-		movem.l (%sp)+,%d2/%a1
+		move.l %d2,%d0			| copy it into the output reg
+		debugprint "asciitoint no error value and digit count", SECTION_MONITOR, (REG_D0+REG_D1)
+		clearzero			| in case value is 0
+4:		movem.l (%sp)+,%d2/%a1
+		rts
+
+| convert the nybble wide string at a0 into an integer, storing the result in d0. on error
+| zero will be set.
+
+asciitonybble:	debugprint "asciitonybble", SECTION_MONITOR, 0
+		move.b (%a0)+,%d0		| get the character
+		debugprint "asciitonybble got character", SECTION_MONITOR, REG_D0
+		sub.b #'0',%d0			| subtract '0'
+		blt 2f				| <0? bad
+		cmp.b #9,%d0			| less then or equal to 9?
+		bls 1f				| yes? we are done with this
+		sub.b #'A'-':',%d0		| subtract diff 'A'-':'
+		blt 2f				| <0? bad
+		cmp.b #0x10,%d0			| see if it is uppercase
+		blt 1f				| was uppercase
+		sub.b #'a'-'A',%d0		| was lowercase
+		cmp.b #0x10,%d0			| compare with upper range
+		bge 2f				| <=15? good
+1:		debugprint "asciitobybble no error got digit", SECTION_MONITOR, REG_D0
+		clearzero			| clear zero, incase result was zero
+		rts
+2:		debugprint "asciitobybble error", SECTION_MONITOR, 0
+		move.b #0,%d0			| set zero (and return zero)
+		rts
+
+| convert the ascii hex string at a0 into bytes at the memory a1, keep going until there is
+| a null or an error. on error zero is set.
+
+bytesfromascii:	movem.l %d0-%d1,-(%sp)
+1:		bsr asciitonybble		| get the nybble in d0
+		beq 2f				| on error, exit
+		move.b %d0,%d1			| save result in d1
+		bsr asciitonybble		| get the nybble in d0
+		beq 2f				| on error, exit
+		asl.l #4,%d1			| shift val to next nybble
+		add.b %d0,%d1			| save result in d1
+		move.b %d1,(%a1)+		| save the converted byte
+		tst.b (%a0)			| peek at the next byte
+		bne 1b				| if it's a null we are done, good exit
+		setzero				| good exit
+		bra 3f
+2:		clearzero			| bad exit
+3:		movem.l (%sp)+,%d0-%d1
 		rts
 
 | compare the string at a0 with the string at a1, setting d0 to 0 if they are

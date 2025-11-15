@@ -38,3 +38,165 @@ com_\name:	.long \name			| handler pointer
 		.long 0x0
 		.long \nextblock		| vital! probably 0
 .endm
+
+.macro setzero
+		ori #0x04,%ccr			| set the z bit
+.endm
+
+.macro clearzero
+		andi #0xfb,%ccr			| clear the z bit
+.endm
+
+.macro enableints
+		andi #0xf8ff,%sr
+.endm
+
+.macro disableints
+		ori #0x0700,%sr
+.endm
+
+.macro permit
+		move.w #1,permitted
+.endm
+
+.macro forbid
+		clr.w permitted
+.endm
+
+.macro debugreg label, reg
+		movem.l %d0/%a0,-(%sp)
+		move.l \reg,-(%sp)
+		lea (\label,%pc),%a0
+		bsr serputstr
+		move.l (%sp)+,%d0
+		bsr serputlong
+		movem.l (%sp)+,%d0/%a0
+.endm
+
+.macro debugstr label, reg
+		movem.l %d0/%a0,-(%sp)
+		move.l \reg,-(%sp)
+		lea (\label,%pc),%a0
+		bsr serputstr
+		move.b #'[',%d0
+		bsr serputchar
+		move.l (%sp)+,%a0
+		bsr serputstr
+		move.b #']',%d0
+		bsr serputchar
+		movem.l (%sp)+,%d0/%a0
+.endm		
+
+.macro debugprint message, section, flags
+.if		\section & DEBUG_SECTIONS
+		.section .rodata
+_\@:		.asciz "\message"
+
+		.section .text
+		.align 2
+
+		movem.l %a5,-(%sp)
+		movem.l %a0-%a1,-(%sp)
+		movea.l #portadevice,%a5
+.if		\section == SECTION_MONITOR
+		lea (monitormsg,%pc),%a0
+.endif
+.if		\section == SECTION_MEMORY
+		lea (memorymsg,%pc),%a0
+.endif
+.if		\section == SECTION_LISTS
+		lea (listsmsg,%pc),%a0
+.endif
+.if		\section == SECTION_TASKS
+		lea (tasksmsg,%pc),%a0
+.endif
+.if		\section == SECTION_DEBUGGER
+		lea (debuggermsg,%pc),%a0
+.endif
+		bsr serputstr
+		lea (_\@,%pc),%a0
+		bsr serputstr
+		movem.l (%sp)+,%a0-%a1
+
+.if		\flags & REG_D0
+		debugreg d0msg, %d0
+.endif
+.if		\flags & REG_D1
+		debugreg d1msg, %d1
+.endif
+.if		\flags & REG_D2
+		debugreg d2msg, %d2
+.endif
+.if		\flags & REG_D3
+		debugreg d3msg, %d3
+.endif
+.if		\flags & REG_D4
+		debugreg d4msg, %d4
+.endif
+.if		\flags & REG_D5
+		debugreg d5msg, %d5
+.endif
+.if		\flags & REG_D6
+		debugreg d6msg, %d6
+.endif
+.if		\flags & REG_D7
+		debugreg d7msg, %d7
+.endif
+
+.if		\flags & REG_A0
+		debugreg a0msg, %a0
+.endif
+.if		\flags & REG_A1
+		debugreg a1msg, %a1
+.endif
+.if		\flags & REG_A2
+		debugreg a2msg, %a2
+.endif
+.if		\flags & REG_A3
+		debugreg a3msg, %a3
+.endif
+.if		\flags & REG_A4
+		debugreg a4msg, %a4
+.endif
+.if		\flags & REG_A5
+		debugreg a5msg, %a5
+.endif
+.if		\flags & REG_A6
+		debugreg a6msg, %a6
+.endif
+.if		\flags & REG_A7
+		debugreg a7msg, %a7
+.endif
+
+.if		\flags & STR_A0
+		debugstr a0msg, %a0
+.endif
+.if		\flags & STR_A1
+		debugstr a1msg, %a1
+.endif
+.if		\flags & STR_A2
+		debugstr a2msg, %a2
+.endif
+.if		\flags & STR_A3
+		debugstr a3msg, %a3
+.endif
+.if		\flags & STR_A4
+		debugstr a4msg, %a4
+.endif
+.if		\flags & STR_A5
+		debugstr a5msg, %a5
+.endif
+.if		\flags & STR_A6
+		debugstr a6msg, %a6
+.endif
+.if		\flags & STR_A7
+		debugstr a7msg, %a7
+.endif
+
+		movem.l %a0,-(%sp)
+		lea (newlinemsg,%pc),%a0
+		bsr serputstr
+		movem.l (%sp)+,%a0
+		movem.l (%sp)+,%a5
+.endif
+.endm

@@ -6,7 +6,7 @@
 
 		.global serialinit
 		.global serputchar
-		.global setgetchar
+		.global sergetchar
 		.global serputstr
 		.global sergetstr
 

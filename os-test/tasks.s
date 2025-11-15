@@ -1,5 +1,7 @@
-		.include "include/system.i"
+		.include "../include/macros.i"
+		.include "../include/system.i"
 		.include "../include/hardware.i"
+		.include "include/system.i"
 
 		.section .text
 		.align 2
