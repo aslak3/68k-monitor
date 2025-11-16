@@ -32,6 +32,7 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "memfill", 3, 2, 2
 		nocheckcommand "memtest"
 		checkcommand "ethdl", 0x80, 3
+		checkcommand "hextobytes" 0x800, 3
 		endcommand 0x400		| table in ram?
 
 		.section .text
@@ -234,6 +235,12 @@ ethdl:		move.l (1*4,%a1),-(%sp)
 		lea 8(%sp),%sp
 		rts
 
+hextobytes:	move.l (0*4,%a1),%a0
+		move.l (1*4,%a1),%a1
+		bsr bytesfromascii
+		beq generror			| will rts
+		rts
+
 testtransmit:	bsr ne2k_setup
 		bsr test_transmit
 		rts
@@ -286,7 +293,20 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		bsr serputstr			| and print it
 		rts
 
+| branch target for showing a generic error message
+
+generror:	lea (generrormsg,%pc),%a0
+		bsr serputstr
+		rts
+
 filesizemsg:	.asciz "File size: "
 
 		.section .bss
 		.align 2
+
+		.section .rodata
+		.align 2
+
+entercmdmsg:	.asciz "Monitor: > "
+
+generrormsg:	.asciz "Command returned an error\r\n"

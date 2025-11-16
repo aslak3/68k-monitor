@@ -127,9 +127,11 @@ asciitonybble:	debugprint "asciitonybble", SECTION_MONITOR, 0
 		rts
 
 | convert the ascii hex string at a0 into bytes at the memory a1, keep going until there is
-| a null or an error. on error zero is set.
+| a null or an error. on error zero is set. string must be whole bytes otherwise an error
+| is generated.
 
-bytesfromascii:	movem.l %d0-%d1,-(%sp)
+bytesfromascii:	debugprint "bytesfromascii called", SECTION_MONITOR, 0
+		movem.l %d0-%d1,-(%sp)
 1:		bsr asciitonybble		| get the nybble in d0
 		beq 2f				| on error, exit
 		move.b %d0,%d1			| save result in d1
@@ -140,9 +142,11 @@ bytesfromascii:	movem.l %d0-%d1,-(%sp)
 		move.b %d1,(%a1)+		| save the converted byte
 		tst.b (%a0)			| peek at the next byte
 		bne 1b				| if it's a null we are done, good exit
-		setzero				| good exit
+		debugprint "bytesfromascii good exit", SECTION_MONITOR, 0
+		clearzero			| good exit
 		bra 3f
-2:		clearzero			| bad exit
+2:		debugprint "bytesfromascii bad exit", SECTION_MONITOR, 0
+		setzero				| bad exit
 3:		movem.l (%sp)+,%d0-%d1
 		rts
 
