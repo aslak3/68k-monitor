@@ -4,6 +4,8 @@
 		.align 2
 
 		.global start
+		.global entry
+		.global savedregisters
 
 start:		movea.l #0x01000000,%sp		| 16 MB
 
@@ -19,7 +21,7 @@ start:		movea.l #0x01000000,%sp		| 16 MB
 
 		move.b #1,LED
 
-|		bsr exceptionsinit		| setup execption handlers
+		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
 |		bsr timerinit			| prepare the timer
 |		bsr vgainit
@@ -36,7 +38,33 @@ start:		movea.l #0x01000000,%sp		| 16 MB
 		move.w #0x2000,%sr
 
 		move.b #0,LED
-		movea.l #portadevice,%a5
+		move.l #0xcabba6e,%d0
+		movea.l #0xdeadbeef,%a5
+
+1:		trap #0				| enter monitor
+		addq.l #1,%d0			| just change d0
+		bra 1b				| run loop again
+
+entry:		movem.l %d0-%d7/%a0-%a7,savedregisters
+						| save all registers
+
+
+		movea.l #portadevice,%a5	| point a5 to port a device
+		movea.l #trap0msg,%a0		| load address of trap0 message
+		bsr serputstr			| print trap0 message
+		move.l (2,%sp),%d0		| get pc
+		bsr serputlong			| print pc
+		movea.l #srmsg,%a0		| load sr message
+		bsr serputstr			| print sr message
+		move.w (0,%sp),%d0		| get sr
+		bsr serputword			| print sr
+		movea.l #formvectormsg,%a0	| load format/vector message
+		bsr serputstr			| print it
+		move.w (6,%sp),%d0		| get format/vector
+		| TODO: resolve vector into human readable form for banner
+		bsr serputword			| print it
+		lea (newlinemsg,%pc),%a0	| need a newline
+		bsr serputstr			| and print it
 
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
 		bsr serputstr			| ...
@@ -83,6 +111,9 @@ nocommand:	lea (nocommandmsg,%pc),%a0
 		.section .rodata
 		.align 2
 
+trap0msg:	.asciz "\r\n*** Entering Monitor via Trap #0 PC: "
+srmsg:		.asciz " SR: "
+formvectormsg: 	.asciz " Format/Vector: "
 entercmdmsg:	.asciz "Monitor: > "
 
 parsererrormsg:	.asciz "Parser rror!\r\n"
@@ -91,6 +122,8 @@ badparamsmsg:	.asciz "Bad paramters to command\r\n"
 
 		.section .bss
 		.align 2			| longs need aligning
+
+savedregisters:	.space (8*2*4)
 
 inputbuffer:	.space 256
 cmdbuffer:	.space 256

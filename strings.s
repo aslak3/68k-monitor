@@ -1,6 +1,7 @@
 		.include "include/macros.i"
 		.include "include/system.i"
 
+		.global puttostr
 		.global serputbyte
 		.global serputword
 		.global serputlong
@@ -13,8 +14,20 @@
 		.global makecharprint
 		.global toupper
 
+		.global strdevice
+
 		.section .text
 		.align 2
+
+| getting from strings is an alternative to serial input
+
+getfromstr:	move.b (%a0)+,%d0
+		rts
+
+| as an alternative to serial output, set a5 to the dummy device to print into a0
+
+puttostr:	move.b %d0,(%a0)+
+		rts
 
 | convert the byte in d0 to hex, printing on the function in a5. d0.w is retained
 
@@ -89,6 +102,8 @@ asciitoint:	debugprint "asciitoint", SECTION_MONITOR, 0
 		move.b (%a0),%d0		| peek at the next byte
 		cmp.b #'!',%d0			| see if its a nowsp char
 		bls 3f				| yes? then done (good)
+		cmp.b #',',%d0			| looking for comma
+		beq 3f				| that can be a separator too
 		cmp.b #8,%d1			| too many digits?
 		blt 0b				| no? back for more
 2:		debugprint "asciitoint error", SECTION_MONITOR, 0
@@ -219,3 +234,8 @@ toupper:	cmp.b #'a,%d0			| compare with "a"
 		sub.b #'a-'A,%d0		| convert to uppercase
 1:		rts
 
+		.section .rodata
+		.align 4
+
+strdevice:	.long getfromstr
+		.long puttostr

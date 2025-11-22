@@ -20,6 +20,9 @@ exceptionsinit:	move.l #buserror,VBUSERROR
 		move.l #spurious,VSPURIOUS
 		move.l #aline,VALINEEMU
 		move.l #fline,VFLINEEMU
+
+		move.l #entry,TRAP0VECTOR	| setup the vector for enterring monitor
+
 		rts
 
 buserror:	lea (buserrormsg,%pc),%a0

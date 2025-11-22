@@ -1,5 +1,6 @@
 
 		.include "include/macros.i"
+		.include "include/system.i"
 		.include "include/ascii.i"
 		.include "include/hardware.i"
 
@@ -33,6 +34,11 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "memtest"
 		checkcommand "ethdl", 0x80, 3
 		checkcommand "hextobytes" 0x800, 3
+		nocheckcommand "resume"
+		checkcommand "runat", 3
+		nocheckcommand "printregs"
+		checkcommand "setdreg", 1, 3
+		checkcommand "setareg", 1, 3
 		endcommand 0x400		| table in ram?
 
 		.section .text
@@ -48,10 +54,10 @@ readbyte:	movea.l (0,%a1),%a0		| get the first argument
 		bsr serputbyte			| convert to byte and print
 		bra readcommon			| add newline
 
-readword:	movea.l (0,%a1),%a0		| get the first argument
-		move.w (%a0),%d0		| get the word at that addr
-		bsr serputword			| convert to long and print
-		bra readcommon			| add newline
+readword:  	movea.l (0,%a1),%a0      	| get the first argument
+		move.w (%a0),%d0         	| get the word at that addr
+		bsr serputword           	| convert to word and print
+		bra readcommon           	| add newline
 
 readlong:	movea.l (0,%a1),%a0		| get the first argument
 		move.l (%a0),%d0		| get the long at that addr
@@ -222,7 +228,6 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    patternfillb addr.l length.w : fill with length bytes\r\n"
 		.ascii "    memfill addr.l length.w val.w : fill with val fixed word\r\n"
 		.ascii "    checksum addr.l count.w : checksum memory, connt in longs\r\n"
-		.ascii "    download filename.s addr.l : download the file over XMODEM\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
 
@@ -293,6 +298,54 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		bsr serputstr			| and print it
 		rts
 
+resume:		movem.l savedregisters,%d0-%d7/%a0-%a7
+						| restore all registers
+		rte
+
+runat:		movea.l (0*4,%a1),%a0		| get address to resume at
+		move.l %a0,(2,%sp)		| set pc
+		bra resume
+
+printregs:	movea.l #savedregisters,%a1	| get regs
+		clr.w %d1			| count of reg from 0
+		movea.l #d0msg,%a2		| a0 reg
+1:		move.l %a2,%a0			| restore label address
+		bsr serputstr			| print the label
+		adda.l #5,%a2			| move to next label "A0: \0"
+		move.l (%a1)+,%d0		| get a register
+		bsr serputlong			| output it into a0
+		move.b #ASC_SP,%d0		| add a space
+		bsr serputchar			| and print it
+		addq.w #1,%d1			| add one to reg
+		move %d1,%d0			| copy the reg count
+		andi.w #0x3,%d0			| check for gap after /4 reg
+		bne 2f				| no gap
+		movea.l #newlinemsg,%a0		| need a gap
+		bsr serputstr			| print the gap
+2:		cmp.w #REG_COUNT,%d1		| looking for the last reg
+		bne 1b				| back to the next reg
+		rts
+
+setdreg:	movea.l #savedregisters+(0*4),%a0
+						| get d registers
+		bra setreg
+
+setareg:	movea.l #savedregisters+(8*4),%a0
+						| get a registers
+		bra setreg
+
+
+setreg:		move.l (0*4,%a1),%d0		| get the register number
+		cmp.b #8,%d0			| compare with 8
+		bge generror			| oopsy
+		lsl.l #2,%d0			| make it a long offset
+		move.l (1*4,%a1),%d1		| get the value
+		move.l %d1,(%a0,%d0)		| set the register
+		rts
+
+		.section .rodata
+		.align 2
+
 | branch target for showing a generic error message
 
 generror:	lea (generrormsg,%pc),%a0
@@ -310,3 +363,21 @@ filesizemsg:	.asciz "File size: "
 entercmdmsg:	.asciz "Monitor: > "
 
 generrormsg:	.asciz "Command returned an error\r\n"
+
+d0msg:		.asciz "D0: "
+d1msg:		.asciz "D1: "
+d2msg:		.asciz "D2: "
+d3msg:		.asciz "D3: "
+d4msg:		.asciz "D4: "
+d5msg:		.asciz "D5: "
+d6msg:		.asciz "D6: "
+d7msg:		.asciz "D7: "
+
+a0msg:		.asciz "A0: "
+a1msg:		.asciz "A1: "
+a2msg:		.asciz "A2: "
+a3msg:		.asciz "A3: "
+a4msg:		.asciz "A4: "
+a5msg:		.asciz "A5: "
+a6msg:		.asciz "A6: "
+a7msg:		.asciz "A7: "

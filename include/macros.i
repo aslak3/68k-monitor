@@ -55,12 +55,12 @@ com_\name:	.long \name			| handler pointer
 		ori #0x0700,%sr
 .endm
 
-.macro permit
-		move.w #1,permitted
+.macro enablesuper
+		ori #0x2000,%sr          	| set supervisor bit
 .endm
 
-.macro forbid
-		clr.w permitted
+.macro disablesuper
+		andi #0xDFFF,%sr		| clear supervisor bit
 .endm
 
 .macro debugreg label, reg
