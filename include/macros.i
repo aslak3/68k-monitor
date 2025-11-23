@@ -85,7 +85,7 @@ com_\name:	.long \name			| handler pointer
 		move.b #']',%d0
 		bsr serputchar
 		movem.l (%sp)+,%d0/%a0
-.endm		
+.endm
 
 .macro debugprint message, section, flags
 .if		\section & DEBUG_SECTIONS
@@ -98,9 +98,14 @@ _\@:		.asciz "\message"
 		movem.l %a5,-(%sp)
 		movem.l %a0-%a1,-(%sp)
 		movea.l #portadevice,%a5
+
 .if		\section == SECTION_MONITOR
 		lea (monitormsg,%pc),%a0
 .endif
+.if		\section == SECTION_DISASSEMBLER
+		lea (dissasmsg,%pc),%a0
+.endif
+
 .if		\section == SECTION_MEMORY
 		lea (memorymsg,%pc),%a0
 .endif
@@ -113,6 +118,7 @@ _\@:		.asciz "\message"
 .if		\section == SECTION_DEBUGGER
 		lea (debuggermsg,%pc),%a0
 .endif
+
 		bsr serputstr
 		lea (_\@,%pc),%a0
 		bsr serputstr

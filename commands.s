@@ -27,6 +27,7 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "help"
 		nocheckcommand "showticks"
 		checkcommand "checksum", 3, 2
+		checkcommand "memclear", 3, 2
 		checkcommand "memcopy", 3, 2, 3
 		checkcommand "patternfillw" 3, 2
 		checkcommand "patternfillb" 3, 2
@@ -39,6 +40,7 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "printregs"
 		checkcommand "setdreg", 1, 3
 		checkcommand "setareg", 1, 3
+		checkcommand "disass", 3, 2
 		endcommand 0x400		| table in ram?
 
 		.section .text
@@ -109,7 +111,7 @@ dump:		movea.l (0*4,%a1),%a2		| get the start addr (a2)
 
 		move.b #ASC_SP,%d0		| add a space
 		bsr serputchar			| and print it
-		
+
 | ascii display
 
 		move.b #'[',%d0			| add a bracket
@@ -218,16 +220,26 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    writebytes addr.l [value.b ...] : write bytes at addr\r\n"
 		.ascii "    writewords addr.l [value.w ...] : write words at addr\r\n"
 		.ascii "    writelongs addr.l [value.l ...] : write longs at addr\r\n"
+		.ascii "    memcopy fromaddr.l length.w toaddr.l : copy memory\r\n"
+		.ascii "    memclear addr.l length.w : clear memory\r\n"
+		.ascii "    memfill addr.l length.w val.w : fill with val fixed word\r\n"
+		.ascii "    memtest : test memory\r\n"
+		.ascii "    patternfillw addr.l length.w : fill with length words\r\n"
+		.ascii "    patternfillb addr.l length.w : fill with length bytes\r\n"
+		.ascii "    checksum addr.l count.w : checksum memory, count in longs\r\n"
+		.ascii "Registess and execution:\r\n"
+		.ascii "    printregs : display all registers\r\n"
+		.ascii "    setdreg regnum.b val.l : set data register\r\n"
+		.ascii "    setareg regnum.b val.l : set address register\r\n"
+		.ascii "    runat addr.l : resume execution at addr\r\n"
+		.ascii "    resume : resume execution\r\n"
+		.ascii "    disass addr.l length.w : disassemble code at addr for length words\r\n"
 		.ascii "Other:\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser\r\n"
 		.ascii "    testtransmit : test the ethernet by sending a packet\r\n"
 		.ascii "    ethdl filename.s addr.l : download the file over ethernet\r\n"
+		.ascii "    hextobytes addr.l : convert hex string to bytes\r\n"
 		.ascii "    showticks : show the tick count in 1/44100 seconds\r\n"
-		.ascii "    memcopy fromaddr.l length.w toaddr.l : copy memory\r\n"
-		.ascii "    patternfillw addr.l length.w : fill with length words\r\n"
-		.ascii "    patternfillb addr.l length.w : fill with length bytes\r\n"
-		.ascii "    memfill addr.l length.w val.w : fill with val fixed word\r\n"
-		.ascii "    checksum addr.l count.w : checksum memory, connt in longs\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
 
@@ -287,6 +299,13 @@ memfill:	movea.l (0*4,%a1),%a0		| get address to read from
 		dbra %d1,1b
 		rts
 
+memclear:	movea.l (0*4,%a1),%a0		| get address to read from
+		move.w (1*4+2,%a1),%d1		| get the length
+		subq.w #1,%d1			| used in dbra
+1:		clr.b (%a0)+			| clear the byte
+		dbra %d1,1b			| back for more
+		rts
+
 checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		move.w (1*4+2,%a1),%d1		| get the length
 		subq.w #1,%d1			| used in dbra
@@ -341,6 +360,11 @@ setreg:		move.l (0*4,%a1),%d0		| get the register number
 		lsl.l #2,%d0			| make it a long offset
 		move.l (1*4,%a1),%d1		| get the value
 		move.l %d1,(%a0,%d0)		| set the register
+		rts
+
+disass:		move.l (0*4,%a1),%a0		| get address to disassemble
+		move.w (1*4+2,%a1),%d0		| get the length
+		bsr disassemble			| disassemble it
 		rts
 
 		.section .rodata

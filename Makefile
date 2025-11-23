@@ -9,7 +9,7 @@ FLASHER = ./tools/flasher
 
 BIN = monitor.bin
 OBJS = main.o exceptions.o constants.o commands.o serial.o strings.o parser.o debug.o \
-	misc.o ticks.o memtest.o \
+	misc.o ticks.o memtest.o disassembler.o \
 	eth.o string.o ne2k.o asm-wrapper.o mini-printf.o
 
 all: $(BIN)

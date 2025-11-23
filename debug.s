@@ -17,6 +17,7 @@
 		.global a7msg
 
 		.global monitormsg
+		.global dissasmsg
 		.global memorymsg
 		.global listsmsg
 		.global tasksmsg
@@ -50,6 +51,7 @@ memorymsg:	.asciz "MEMORY: "
 listsmsg:	.asciz "LISTS: "
 tasksmsg:	.asciz "TASKS: "
 debuggermsg:	.asciz "DEBUGGER: "
+dissasmsg:	.asciz "DISASSEMBLER: "
 
 		.section .bss
 		.align 2
