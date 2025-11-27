@@ -206,3 +206,17 @@ _\@:		.asciz "\message"
 		movem.l (%sp)+,%a5
 .endif
 .endm
+
+.macro instruction label, name, pattern, mask, widthfunc, srcfunc, dstfunc
+		.section .rodata.instructions.names
+		.align 2
+name_\label:	.asciz "\name"
+		.section .rodata
+		.align 2
+		.long name_\label		| name pointer
+		.word \pattern			| bit pattern
+		.word \mask			| mask
+		.long \widthfunc		| width extraction routine
+		.long \srcfunc			| source extraction routine
+		.long \dstfunc			| destination extraction routine
+.endm

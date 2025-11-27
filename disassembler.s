@@ -6,39 +6,286 @@
 
 		.global disassemble
 
+		.equ WIDTH_BYTE, 0
+		.equ WIDTH_WORD, 1
+		.equ WIDTH_LONG, 2
+
+		.equ INST_NAME, 0
+		.equ INST_PATTERN, 4
+		.equ INST_MASK, 6
+		.equ INST_WIDTHSUB, 8
+		.equ INST_SRCSUB, 12
+		.equ INST_DSTSUB, 16
+		.equ INST_LENGTH, 20
+
+
 | disassemble the code from the given address at a0 for the given length in words at d0
 
-disassemble:	move.l %a0,%a1			| copy address to a1 for processing
-		sub.w #1,%d0			| adjust length for loop
+disassemble:	move.l %a0,%a4			| copy address to a4 for processing
+		move.w %d0,%d3			| copy instruction count to d3
+		sub.w #1,%d3			| adjust length for loop
 
 | in the loop:
-|     a1 = current address, d0 = words left, d1 = instruction word excluding line,
-| d2 = instruction line
+|     a4 = current address
 
-.toploop:	move.w (%a1)+,%d1		| fetch the instruction word
-		move.w %d1,%d2			| copy it to d2 for manipulation
-		lsr.w #8,%d2			| isolate the opcode in d2
-		lsr.w #4,%d2			| shift right 4 more bits
-		and.w #0x0fff,%d1		| mask off everything but the line bits
-		cmp.w #0x00,%d2			| check for 0 line instruction
-		beq handle0line
-		cmp.w #0x01,%d2			| check for 1 line instruction
-		beq handle1line
-		bra badline			| unknown line
-.continue:	dbra %d0,.toploop		| loop for all instructions
+.toploop:	move.l %a4,%d0			| point to instruction for address printing
+		bsr serputlong			| output the address
+		move.b #':',%d0			| add colon after address
+		bsr serputchar			| output colon
+		move.b #'\t',%d0		| add tab after colon
+		bsr serputchar			| output space
+
+		move.w (%a4)+,%d2		| fetch the instruction word and keep in d2
+		movea.l #instructions,%a1	| point to start of instruction table
+.testloop:	debugprint "Testing for instruction", SECTION_DISASSEMBLER, REG_A1
+		tst.l (INST_NAME,%a1)		| end of table?
+		beq .badinst			| unknown instruction
+		move.w %d2,%d1			| restore original instruction word
+		and.w (INST_MASK,%a1),%d1	| mask off bits not in pattern
+		cmp.w (INST_PATTERN,%a1),%d1	| compare to pattern
+		beq .foundit			| found it!
+		adda.l #INST_LENGTH,%a1		| point to next instruction
+		bra .testloop			| keep looking
+
+.continue:	dbra %d3,.toploop		| loop for all instructions
 		rts
 
-handle0line:	debugprint "0 line instruction", SECTION_DISASSEMBLER, REG_D1
-		move.w (%a1)+,%d2		| fetch next word
-		debugprint "data word:", SECTION_DISASSEMBLER, REG_D2
-		bra .continue
+.badinst:	movea.l #badinstmsg,%a0		| outputting bad instruction message
+		bsr serputstr			| output bad instruction message
+		bra .endinst			| add a newline and continue
 
-handle1line:	debugprint "1 line instruction", SECTION_DISASSEMBLER, REG_D1
-		bra .continue
+.foundit:	debugprint "Found instruction", SECTION_DISASSEMBLER, REG_D2
 
-badline:	debugprint "Bad instruction line", SECTION_DISASSEMBLER, REG_D2
-		bra .continue
+		movea.l (INST_NAME,%a1),%a0	| get instruction name
+		debugprint "Instruction name", SECTION_DISASSEMBLER, REG_A0
+		bsr serputstr			| output instruction name
+
+		movea.l (INST_WIDTHSUB,%a1),%a0	| get width extraction routine
+		tst.l %a0			| no width?
+		beq 1f				| skip it
+		jsr (%a0)			| call width extraction routine
+
+1:		move.b #' ',%d0			| add space after width, if present
+		bsr serputchar			| output space
+
+		movea.l (INST_SRCSUB,%a1),%a0	| get source extraction routine
+		tst.l %a0			| no source?
+		beq 1f				| skip it
+		jsr (%a0)			| call source extraction routine
+		move.b #',',%d0			| add comma after source
+		bsr serputchar			| output comma
+
+1:		movea.l (INST_DSTSUB,%a1),%a0	| get dest extraction routine
+		tst.l %a0			| no dest?
+		beq .endinst			| skip it
+		jsr (%a0)			| call dest extraction routine
+
+.endinst:	movea.l #newlinemsg,%a0		| outputting newline after instruction
+		bsr serputstr			| output newline
+
+		bra .continue			| continue with next instruction
+
+| extraction routines
+
+widthbytesub:	movem.l %a0,-(%sp)
+		movea.l #bytewidth,%a0
+		bsr serputstr
+		movem.l (%sp)+,%a0
+		rts
+
+widthwordsub:	movem.l %a0,-(%sp)
+		movea.l #wordwidth,%a0
+		bsr serputstr
+		movem.l (%sp)+,%a0
+		rts
+
+width76sub:	movem.l %d2/%a0,-(%sp)
+		lsr.w #6,%d2			| get bits 7-6
+		and.w #0x3,%d2			| mask to 2 bits
+		move.l (%d2.w*4,widthtable),%a0	| get width string
+		bsr serputstr
+		movem.l (%sp)+,%d2/%a0
+		rts
+
+immediatebyte:	movem.l %d0/%a0,-(%sp)
+		movea.l #hashhex, %a0		| output '#0x'
+		bsr serputstr			| output it
+		move.w (%a4)+,%d0		| get the byte but in a word
+		bsr serputbyte			| output the byte
+		movem.l (%sp)+,%d0/%a0
+		rts
+
+immediateword:	movem.l %d0/%a0,-(%sp)
+		movea.l #hashhex, %a0		| output '#0x'
+		bsr serputstr			| output it
+		move.w (%a4)+,%d0		| get the word
+		bsr serputword			| output the word
+		movem.l (%sp)+,%d0/%a0
+		rts
+
+immediatelong:	movem.l %d0/%a0,-(%sp)
+		movea.l #hashhex, %a0		| output '#0x'
+		bsr serputstr			| output it
+		move.l (%a4)+,%d0		| get the long
+		bsr serputlong			| output the long
+		movem.l (%sp)+,%d0/%a0
+		rts
+
+immedatebwl:	movem.l %d2/%a0,-(%sp)
+		movea.l #hashhex, %a0		| output '#0x'
+		bsr serputstr			| output it
+		lsr.w #6,%d2			| get bits 7-6
+		and.w #0x3,%d2			| mask to 2 bits
+
+		cmp.w #WIDTH_BYTE,%d2		| byte?
+		beq 1f				| yes, byte
+		cmp.w #WIDTH_WORD,%d2		| word?
+		beq 2f				| yes, word
+		cmp.w #WIDTH_LONG,%d2		| long?
+		beq 3f				| yes, long
+
+		movea.l #badinstmsg,%a0		| bad width
+		bsr serputstr			| output bad instruction message
+		bra 100f
+
+1:		move.w (%a4)+,%d0		| get the byte in low half
+		bsr serputbyte			| output it
+		bra 100f
+
+2:		move.w (%a4)+,%d0		| get the word
+		bsr serputword			| output it
+		bra 100f
+
+3:		move.l (%a4)+,%d0		| get the long
+		bsr serputlong			| output it
+
+100:		movem.l (%sp)+,%d2/%a0
+		rts
+
+regorea:	movem.l %d2-%d3/%a0,-(%sp)
+		move.l %d2,%d3			| save original instruction word
+		lsr.w #3,%d2			| get bits 5-3
+		and.w #0x7,%d2			| mask to 3 bits
+		cmp.w #0b000,%d2		| data register
+		beq 1f				| yes, data register
+		cmp.w #0b001,%d2		| address register
+		beq 2f				| yes, address register
+		cmp.w #0b010,%d2		| address register indirect
+		beq 3f				| yes, address register indirect
+		cmp.w #0b011,%d2		| address register indirect with postincrement
+		beq 4f				| yes, address register indirect with postincrement
+		cmp.w #0b100,%d2		| address register indirect with predecrement
+		beq 5f				| yes, address register indirect with predecrement
+		cmp.w #0b101,%d2		| address with displacement
+		beq 6f				| yes, address with displacement
+
+		movea.l #badinstmsg,%a0		| bad width
+		bsr serputstr			| output bad instruction message
+		bra 100f
+
+1:		bsr serputdatareg		| output '%d'
+		bra 100f
+2:		bsr serputaddrreg		| output '%a'
+		bra 100f
+
+3:		bsr serputaddrregi		| output '(%a)'
+		bra 100f
+
+4:		bsr serputaddrregi		| output '(%a)'
+		move.b #'+',%d0			| add '+' after ea
+		bsr serputchar			| output '+'
+		bra 100f
+
+5:		move.b #'-',%d0			| add '-' before ea
+		bsr serputchar			| output '-'
+		bsr serputaddrregi		| output '(%a)'
+		bra 100f
+
+6:		move.b #'(',%d0			| add '(' before ea
+		bsr serputchar			| output '('
+		move.w (%a4)+,%d0		| get the displacement
+		bsr serputword			| output the displacement
+		move.b #',',%d0			| add ',' after displacement
+		bsr serputchar			| output ','
+		bsr serputaddrreg		| output '%a'
+		move.b #')',%d0			| add ')' after ea
+		bsr serputchar			| output ')'
+		bra 100f
+
+100:		movem.l (%sp)+,%d2-%d3/%a0
+		rts
+
+| prints the reg name for data register in d2
+serputdatareg:	movea.l #dataregstr,%a0		| output '%a'
+		bra 1f
+
+| prints the reg name for address register in
+serputaddrreg:	movea.l #addrregstr,%a0		| output '%a'
+		bra 1f
+
+1:		bsr serputstr			| output '%d' or '%a'
+		move.b %d3,%d0			| get original instruction word
+		and.b #0x7,%d0			| mask to 3 bits
+		add.b #'0',%d0			| convert to ascii
+		bsr serputchar
+		rts
+
+| same as above but with parentheses around it (indirect mode)
+serputaddrregi:	move.b #'(',%d0			| add '(' before ea
+		bsr serputchar			| output '('
+		move.w %d3,%d0			| restore original instruction word
+		bsr serputaddrreg		| output register number
+		move.b #')',%d0			| add ')' after ea
+		bsr serputchar			| output ')'
+		rts
+
+ccrsub:		movem.l %a0,-(%sp)
+		movea.l #ccrstr,%a0
+		bsr serputstr
+		movem.l (%sp)+,%a0
+		rts
+
+srsub:		movem.l %a0,-(%sp)
+		movea.l #srstr,%a0
+		bsr serputstr
+		movem.l (%sp)+,%a0
+		rts
 
 test:		ori.b #0x12,%ccr
 		ori.w #0x3456,%sr
+		ori.b #0x7f,%d7
+		ori.l #0xdeadbeef,(%a2)
+		ori.w #0x1234,(%a3)+
+		ori.l #0x12345678,-(%a4)
+		ori.w #0x5678,(0x1234,%a5)
+		ori.l #0xcabba6e0,([0x12345678,%a5,%d3])
+		ori.l #0x789abcde,%d5
+		nop
+		rts
 
+		.section .rodata
+		.align 2
+
+instructions:	instruction ori_ccr, "ori", 0b0000000000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
+		instruction ori_sr, "ori", 0b0000000001111100, 0xffff, widthwordsub, immediateword, srsub
+		instruction ori_, "ori", 0b0000000000000000, 0xff00, width76sub, immedatebwl, regorea
+
+		.long 0					| end marker
+
+nullwidth:	.asciz ""
+bytewidth:	.asciz ".b"
+wordwidth:	.asciz ".w"
+longwidth:	.asciz ".l"
+
+widthtable:	.long bytewidth
+		.long wordwidth
+		.long longwidth
+
+hashhex:	.asciz "#0x"
+
+ccrstr:		.asciz "%ccr"
+srstr:		.asciz "%sr"
+dataregstr:	.asciz "%d"
+addrregstr:	.asciz "%a"
+
+badinstmsg:	.asciz "<bad instruction>"
