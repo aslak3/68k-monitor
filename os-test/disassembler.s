@@ -180,8 +180,10 @@ regorea:	movem.l %d2-%d3/%a0,-(%sp)
 		beq 6f				| yes, address with displacement
 		cmp.w #0b110,%d2		| address register with index and displacement
 		beq 7f				| yes, address with index and displacement
+		cmp.w #0b111,%d2		| other modes
+		beq 10f				| yes, modes switched on register field
 
-		movea.l #badinstmsg,%a0		| bad width
+bad:		movea.l #badinstmsg,%a0		| bad width
 		bsr serputstr			| output bad instruction message
 		bra 100f
 
@@ -253,6 +255,44 @@ regorea:	movem.l %d2-%d3/%a0,-(%sp)
 		bsr serputchar			| output ','
 		bra 100f
 
+10:		move.w %d3,%d0			| get original instruction word
+		and.w #0x7,%d0			| mask to 3 bits
+		cmp.w #0b000,%d0		| absolute word
+		beq 1f				| yes, absolute word
+		cmp.w #0b001,%d0		| absolute long
+		beq 2f				| yes, absolute long
+		cmp.w #0b010,%d0		| pc with displacement
+		beq 3f				| yes, pc with displacement
+		cmp.w #0b011,%d0		| pc with index and displacement
+		beq 4f				| yes, pc with index and displacement
+		cmp.w #0b100,%d0		| immediate
+		beq 5f				| yes, immediate
+		bra bad				| bad mode
+
+1:		move.b #'(',%d0			| add '(' before absolute word
+		bsr serputchar			| output '('
+		move.w (%a4)+,%d0		| get the absolute word
+		bsr hexword			| output it
+		move.b #')',%d0			| add ')' after ea
+		bsr serputchar			| output ')'
+		bra 100f
+
+2:		move.b #'(',%d0			| add '(' before absolute long
+		bsr serputchar			| output '('
+		move.l (%a4)+,%d0		| get the absolute long
+		bsr hexlong			| output it
+		move.b #')',%d0			| add ')' after ea
+		bsr serputchar			| output ')'
+		bra 100f
+
+3:		bra bad				| bad mode (pc with displacement)
+
+4:		bra bad				| bad mode (pc with index and displacement)
+
+5:		move.w (%a4)+,%d0		| get the immediate word
+		bsr hexword			| output it
+		bra 100f
+
 100:		movem.l (%sp)+,%d2-%d3/%a0
 		rts
 
@@ -313,9 +353,18 @@ srsub:		movem.l %a0,-(%sp)
 		.section .rodata
 		.align 2
 
-instructions:	instruction ori_ccr, "ori", 0b0000000000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
-		instruction ori_sr, "ori", 0b0000000001111100, 0xffff, widthwordsub, immediateword, srsub
-		instruction ori_, "ori", 0b0000000000000000, 0xff00, width76sub, immedatebwl, regorea
+instructions:	instruction ori_ccr, "ori",   0b0000000000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
+		instruction ori_sr, "ori",    0b0000000001111100, 0xffff, widthwordsub, immediateword, srsub
+		instruction ori_ea, "ori",    0b0000000000000000, 0xff00, width76sub, immedatebwl, regorea
+		instruction andi_ccr, "andi", 0b0000001000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
+		instruction andi_sr, "andi",  0b0000001001111100, 0xffff, widthwordsub, immediateword, srsub
+		instruction andi_ea, "andi",  0b0000001000000000, 0xff00, width76sub, immedatebwl, regorea
+		instruction subi_ea, "subi",  0b0000010000000000, 0xff00, width76sub, immedatebwl, regorea
+		instruction addi_ea, "addi",  0b0000011000000000, 0xff00, width76sub, immedatebwl, regorea
+		instruction eori_ccr, "eori", 0b0000101000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
+		instruction eori_sr, "eori",  0b0000101001111100, 0xffff, widthwordsub, immediateword, srsub
+		instruction eori_ea, "eori",  0b0000101000000000, 0xff00, width76sub, immedatebwl, regorea
+		instruction cmpi_ea, "cmpi",  0b0000110000000000, 0xff00, width76sub, immedatebwl, regorea
 
 		.long 0					| end marker
 

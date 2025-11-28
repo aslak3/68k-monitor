@@ -32,7 +32,10 @@ commandarray:   nocheckcommand "_memoryinit"
 
 		nocheckcommand "_tickerinit"
 
+		nocheckcommand "_trapinit"
 		nocheckcommand "_debugger"
+
+		checkcommand "_disass", 3, 2
 
 		endcommand 0x0
 
@@ -176,6 +179,11 @@ testtaskcode2:	lea (testmessage2,%pc),%a0
 1:		dbra %d0,1b
 		dbra %d1,2b
 		bra testtaskcode2
+
+_disass:	move.l (0*4,%a1),%a0		| get address to disassemble
+		move.w (1*4+2,%a1),%d0		| get the length
+		bsr disassemble			| disassemble it
+		rts
 
 		.section .rodata
 		.align 4
