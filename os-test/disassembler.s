@@ -1,5 +1,5 @@
-		.include "include/macros.i"
-		.include "include/system.i"
+		.include "../include/macros.i"
+		.include "../include/system.i"
 
 		.section .text
 		.align 2
@@ -108,32 +108,32 @@ width76sub:	movem.l %d2/%a0,-(%sp)
 		rts
 
 immediatebyte:	movem.l %d0/%a0,-(%sp)
-		movea.l #hashhex, %a0		| output '#0x'
-		bsr serputstr			| output it
+		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the byte but in a word
-		bsr serputbyte			| output the byte
+		bsr hexbyte			| output the byte
 		movem.l (%sp)+,%d0/%a0
 		rts
 
 immediateword:	movem.l %d0/%a0,-(%sp)
-		movea.l #hashhex, %a0		| output '#0x'
-		bsr serputstr			| output it
+		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the word
-		bsr serputword			| output the word
+		bsr hexword			| output the word
 		movem.l (%sp)+,%d0/%a0
 		rts
 
 immediatelong:	movem.l %d0/%a0,-(%sp)
-		movea.l #hashhex, %a0		| output '#0x'
-		bsr serputstr			| output it
+		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
 		move.l (%a4)+,%d0		| get the long
-		bsr serputlong			| output the long
+		bsr hexlong			| output the long
 		movem.l (%sp)+,%d0/%a0
 		rts
 
 immedatebwl:	movem.l %d2/%a0,-(%sp)
-		movea.l #hashhex, %a0		| output '#0x'
-		bsr serputstr			| output it
+		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
 
@@ -149,15 +149,15 @@ immedatebwl:	movem.l %d2/%a0,-(%sp)
 		bra 100f
 
 1:		move.w (%a4)+,%d0		| get the byte in low half
-		bsr serputbyte			| output it
+		bsr hexbyte			| output it
 		bra 100f
 
 2:		move.w (%a4)+,%d0		| get the word
-		bsr serputword			| output it
+		bsr hexword			| output it
 		bra 100f
 
 3:		move.l (%a4)+,%d0		| get the long
-		bsr serputlong			| output it
+		bsr hexlong			| output it
 
 100:		movem.l (%sp)+,%d2/%a0
 		rts
@@ -178,65 +178,124 @@ regorea:	movem.l %d2-%d3/%a0,-(%sp)
 		beq 5f				| yes, address register indirect with predecrement
 		cmp.w #0b101,%d2		| address with displacement
 		beq 6f				| yes, address with displacement
+		cmp.w #0b110,%d2		| address register with index and displacement
+		beq 7f				| yes, address with index and displacement
 
 		movea.l #badinstmsg,%a0		| bad width
 		bsr serputstr			| output bad instruction message
 		bra 100f
 
-1:		bsr serputdatareg		| output '%d'
+1:		move.b %d3,%d0			| get original instruction word
+		bsr serputdatareg		| output '%d'
 		bra 100f
-2:		bsr serputaddrreg		| output '%a'
+2:		move.b %d3,%d0			| get original instruction word
+		bsr serputaddrreg		| output '%a'
 		bra 100f
 
-3:		bsr serputaddrregi		| output '(%a)'
+3:		move.b %d3,%d0			| get original instruction word
+		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
-4:		bsr serputaddrregi		| output '(%a)'
+4:		move.b %d3,%d0			| get original instruction word
+		bsr serputaddrregi		| output '(%a)'
 		move.b #'+',%d0			| add '+' after ea
 		bsr serputchar			| output '+'
 		bra 100f
 
 5:		move.b #'-',%d0			| add '-' before ea
 		bsr serputchar			| output '-'
+		move.b %d3,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
 6:		move.b #'(',%d0			| add '(' before ea
 		bsr serputchar			| output '('
 		move.w (%a4)+,%d0		| get the displacement
-		bsr serputword			| output the displacement
+		bsr hexword			| output the displacement
 		move.b #',',%d0			| add ',' after displacement
 		bsr serputchar			| output ','
+		move.b %d3,%d0			| get original instruction word
 		bsr serputaddrreg		| output '%a'
 		move.b #')',%d0			| add ')' after ea
 		bsr serputchar			| output ')'
 		bra 100f
 
+7:		move.b #'(',%d0			| add '(' before extension word
+		bsr serputchar			| output '(')'
+		move.w (%a4)+,%d4		| get the extension word
+		move.w %d4,%d0			| copy for processing offfset
+		and.w #0x00ff,%d0		| mask to low byte
+		bsr hexbyte			| output low byte offset (signed!)
+		move.b #',',%d0			| add ',' between bytes
+		bsr serputchar			| output ','
+		move.w %d3,%d0			| restore original instruction word
+		bsr serputaddrreg		| output register number
+		move.b #',',%d0			| add ',' between bytes
+		bsr serputchar			| output ','
+		move.w %d4,%d0			| copy for processing register
+		lsr.w #8,%d0			| shift 8 to get register
+		lsr.w #4,%d0			| and another 4
+		btst #3,%d0			| looking for register type
+		beq 1f				| data register in use?
+		bsr serputaddrreg		| output the address register
+		bra 2f				| hop over
+1:		bsr serputdatareg		| output the data register
+2:		move.b #'.',%d0			| width of displacement reg
+		bsr serputchar			| print it
+		btst #11,%d4			| look for word (0) or long (1)?
+		beq 1f				| word width
+		move.b #'l',%d0			| so its a long wide displacement
+		bsr serputchar			| print it
+		bra 2f				| hop over
+1:		move.b #'w',%d0			| so its a word wide displacement
+		bsr serputchar			| print it
+2:		move.b #')',%d0			| add ',' between bytes
+		bsr serputchar			| output ','
+		bra 100f
+
 100:		movem.l (%sp)+,%d2-%d3/%a0
 		rts
 
-| prints the reg name for data register in d2
+| prints the reg name for data register in d3
 serputdatareg:	movea.l #dataregstr,%a0		| output '%a'
 		bra 1f
 
-| prints the reg name for address register in
+| prints the reg name for address register in d3
 serputaddrreg:	movea.l #addrregstr,%a0		| output '%a'
 		bra 1f
 
 1:		bsr serputstr			| output '%d' or '%a'
-		move.b %d3,%d0			| get original instruction word
 		and.b #0x7,%d0			| mask to 3 bits
 		add.b #'0',%d0			| convert to ascii
 		bsr serputchar
 		rts
 
 | same as above but with parentheses around it (indirect mode)
-serputaddrregi:	move.b #'(',%d0			| add '(' before ea
+serputaddrregi:	move.w %d0,%d3			| save d0 in d3
+		move.b #'(',%d0			| add '(' before ea
 		bsr serputchar			| output '('
 		move.w %d3,%d0			| restore original instruction word
 		bsr serputaddrreg		| output register number
 		move.b #')',%d0			| add ')' after ea
 		bsr serputchar			| output ')'
+		rts
+
+| hexbyte: print a byte with 0x in front
+hexbyte:	movea.l #hex,%a0
+		bsr serputstr
+		bsr serputbyte
+		rts
+
+| hexword: print a byte with 0x in front
+hexword:	movea.l #hex,%a0
+		bsr serputstr
+		bsr serputword
+		rts
+
+| hexlong: print a byte with 0x in front
+hexlong:	movea.l #hex,%a0
+		bsr serputstr
+		bsr serputlong
 		rts
 
 ccrsub:		movem.l %a0,-(%sp)
@@ -249,18 +308,6 @@ srsub:		movem.l %a0,-(%sp)
 		movea.l #srstr,%a0
 		bsr serputstr
 		movem.l (%sp)+,%a0
-		rts
-
-test:		ori.b #0x12,%ccr
-		ori.w #0x3456,%sr
-		ori.b #0x7f,%d7
-		ori.l #0xdeadbeef,(%a2)
-		ori.w #0x1234,(%a3)+
-		ori.l #0x12345678,-(%a4)
-		ori.w #0x5678,(0x1234,%a5)
-		ori.l #0xcabba6e0,([0x12345678,%a5,%d3])
-		ori.l #0x789abcde,%d5
-		nop
 		rts
 
 		.section .rodata
@@ -281,7 +328,7 @@ widthtable:	.long bytewidth
 		.long wordwidth
 		.long longwidth
 
-hashhex:	.asciz "#0x"
+hex:		.asciz "0x"
 
 ccrstr:		.asciz "%ccr"
 srstr:		.asciz "%sr"

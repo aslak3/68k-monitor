@@ -9,7 +9,7 @@ FLASHER = ./tools/flasher
 
 BIN = monitor.bin
 OBJS = main.o exceptions.o constants.o commands.o serial.o strings.o parser.o debug.o \
-	misc.o ticks.o memtest.o disassembler.o \
+	misc.o ticks.o memtest.o \
 	eth.o string.o ne2k.o asm-wrapper.o mini-printf.o
 
 all: $(BIN)
@@ -29,6 +29,6 @@ monitor.elf: $(OBJS)
 
 flash:
 	$(FLASHER) -s /dev/ttyS2 -f $(BIN)
-	
+
 clean:
 	rm -f *.o *.elf *.bin

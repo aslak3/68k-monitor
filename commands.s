@@ -40,7 +40,6 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "printregs"
 		checkcommand "setdreg", 1, 3
 		checkcommand "setareg", 1, 3
-		checkcommand "disass", 3, 2
 		endcommand 0x400		| table in ram?
 
 		.section .text
@@ -233,7 +232,6 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    setareg regnum.b val.l : set address register\r\n"
 		.ascii "    runat addr.l : resume execution at addr\r\n"
 		.ascii "    resume : resume execution\r\n"
-		.ascii "    disass addr.l length.w : disassemble code at addr for length words\r\n"
 		.ascii "Other:\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser\r\n"
 		.ascii "    testtransmit : test the ethernet by sending a packet\r\n"
@@ -360,11 +358,6 @@ setreg:		move.l (0*4,%a1),%d0		| get the register number
 		lsl.l #2,%d0			| make it a long offset
 		move.l (1*4,%a1),%d1		| get the value
 		move.l %d1,(%a0,%d0)		| set the register
-		rts
-
-disass:		move.l (0*4,%a1),%a0		| get address to disassemble
-		move.w (1*4+2,%a1),%d0		| get the length
-		bsr disassemble			| disassemble it
 		rts
 
 		.section .rodata
