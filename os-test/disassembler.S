@@ -353,20 +353,35 @@ srsub:		movem.l %a0,-(%sp)
 		.section .rodata
 		.align 2
 
-instructions:	instruction ori_ccr, "ori",   0b0000000000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
-		instruction ori_sr, "ori",    0b0000000001111100, 0xffff, widthwordsub, immediateword, srsub
-		instruction ori_ea, "ori",    0b0000000000000000, 0xff00, width76sub, immedatebwl, regorea
-		instruction andi_ccr, "andi", 0b0000001000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
-		instruction andi_sr, "andi",  0b0000001001111100, 0xffff, widthwordsub, immediateword, srsub
-		instruction andi_ea, "andi",  0b0000001000000000, 0xff00, width76sub, immedatebwl, regorea
-		instruction subi_ea, "subi",  0b0000010000000000, 0xff00, width76sub, immedatebwl, regorea
-		instruction addi_ea, "addi",  0b0000011000000000, 0xff00, width76sub, immedatebwl, regorea
-		instruction eori_ccr, "eori", 0b0000101000111100, 0xffff, widthbytesub, immediatebyte, ccrsub
-		instruction eori_sr, "eori",  0b0000101001111100, 0xffff, widthwordsub, immediateword, srsub
-		instruction eori_ea, "eori",  0b0000101000000000, 0xff00, width76sub, immedatebwl, regorea
-		instruction cmpi_ea, "cmpi",  0b0000110000000000, 0xff00, width76sub, immedatebwl, regorea
+instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b1111111111111111, \
+			widthbytesub, immediatebyte, ccrsub
+		instruction ori_sr,   "ori",	0b0000000001111100, 0b1111111111111111, \
+			widthwordsub, immediateword, srsub
+		instruction ori_ea,   "ori",    0b0000000000000000, 0b1111111100000000, \
+			width76sub, immedatebwl, regorea
 
-		.long 0					| end marker
+		instruction andi_ccr, "andi",   0b0000001000111100, 0b1111111111111111, \
+			widthbytesub, immediatebyte, ccrsub
+		instruction andi_sr,  "andi",   0b0000001001111100, 0b1111111111111111, \
+			widthwordsub, immediateword, srsub
+		instruction andi_ea,  "andi"    0b0000001000000000, 0b1111111100000000, \
+			width76sub, immedatebwl, regorea
+
+		instruction subi_ea,  "subi",   0b0000010000000000, 0b1111111100000000, \
+			width76sub, immedatebwl, regorea
+		instruction addi_ea,  "addi",   0b0000011000000000, 0b1111111100000000, \
+			width76sub, immedatebwl, regorea
+
+		instruction eori_ccr, "eori",   0b0000101000111100, 0b1111111111111111, \
+			widthbytesub, immediatebyte, ccrsub
+		instruction eori_sr,  "eori",   0b0000101001111100, 0b1111111111111111, \
+			widthwordsub, immediateword, srsub
+		instruction eori_ea,  "eori",   0b0000101000000000, 0b1111111100000000, \
+			width76sub, immedatebwl, regorea
+
+		instruction cmpi_ea,  "cmpi",   0b0000110000000000, 0b1111111100000000, \
+			width76sub, immedatebwl, regorea
+		.long 0
 
 nullwidth:	.asciz ""
 bytewidth:	.asciz ".b"

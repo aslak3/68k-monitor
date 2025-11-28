@@ -1,9 +1,10 @@
 TOOLCHAIN = m68k-linux-gnu
 
 AS = $(TOOLCHAIN)-as
+GCC = $(TOOLCHAIN)-gcc
 LD = $(TOOLCHAIN)-ld
 OBJCOPY = $(TOOLCHAIN)-objcopy
-LIBS = -L/usr/lib/gcc-cross/m68k-linux-gnu/12/ -lgcc ../serial.o ../constants.o ../strings.o ../debug.o
+LIBS = ../serial.o ../constants.o ../strings.o ../debug.o
 ETH_SENDER = ../eth-sender/eth-sender
 
 BIN = os-test.bin
@@ -13,7 +14,9 @@ OBJS = main.o memory.o lists.o dumper.o tasks.o ticker.o debugger.o disassembler
 all: $(BIN)
 
 %.o: %.s include/*.i
-	$(AS) -mcpu=68030 -m68881 --fatal-warnings $< -o $@
+	$(AS) -mcpu=68030 -m68881 -fatal-warnings -c $< -o $@
+%.o: %.S include/*.i
+	$(GCC) -mcpu=68030 -m68881 -Xfatal-warnings -c $< -o $@
 disasstest.o: disasstest.s
 	$(AS) -mcpu=68000 --fatal-warnings $< -o $@
 
