@@ -6,8 +6,8 @@
 
 		.global disassemble
 
-		.equ WIDTH_BYTE, 0
-		.equ WIDTH_WORD, 1
+		.equ WIDTH_bytesub, 0
+		.equ WIDTH_wordsub, 1
 		.equ WIDTH_LONG, 2
 
 		.equ INST_NAME, 0
@@ -107,7 +107,7 @@ width76sub:	movem.l %d2/%a0,-(%sp)
 		movem.l (%sp)+,%d2/%a0
 		rts
 
-immediatebyte:	movem.l %d0/%a0,-(%sp)
+immbytesub:	movem.l %d0/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the byte but in a word
@@ -115,7 +115,7 @@ immediatebyte:	movem.l %d0/%a0,-(%sp)
 		movem.l (%sp)+,%d0/%a0
 		rts
 
-immediateword:	movem.l %d0/%a0,-(%sp)
+immwordsub:	movem.l %d0/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the word
@@ -123,7 +123,7 @@ immediateword:	movem.l %d0/%a0,-(%sp)
 		movem.l (%sp)+,%d0/%a0
 		rts
 
-immediatelong:	movem.l %d0/%a0,-(%sp)
+immlongsub:	movem.l %d0/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.l (%a4)+,%d0		| get the long
@@ -131,15 +131,24 @@ immediatelong:	movem.l %d0/%a0,-(%sp)
 		movem.l (%sp)+,%d0/%a0
 		rts
 
-immedatebwl:	movem.l %d2/%a0,-(%sp)
+dreg119sub:	movem.l %d2/%a0,-(%sp)
+		lsr.w #8,%d2			| get bits 11-9
+		lsr.w #1,%d2			| needs one more shift
+		and.w #0x7,%d2			| mask to 3 bits
+		move.b %d2,%d0			| move to d0 for output
+		bsr serputdatareg		| output '%d'
+		movem.l (%sp)+,%d2/%a0
+		rts
+
+immbwlsub:	movem.l %d2/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
 
-		cmp.w #WIDTH_BYTE,%d2		| byte?
+		cmp.w #WIDTH_bytesub,%d2		| byte?
 		beq 1f				| yes, byte
-		cmp.w #WIDTH_WORD,%d2		| word?
+		cmp.w #WIDTH_wordsub,%d2		| word?
 		beq 2f				| yes, word
 		cmp.w #WIDTH_LONG,%d2		| long?
 		beq 3f				| yes, long
@@ -162,7 +171,7 @@ immedatebwl:	movem.l %d2/%a0,-(%sp)
 100:		movem.l (%sp)+,%d2/%a0
 		rts
 
-regorea:	movem.l %d2-%d3/%a0,-(%sp)
+regoreasub:	movem.l %d2-%d3/%a0,-(%sp)
 		move.l %d2,%d3			| save original instruction word
 		lsr.w #3,%d2			| get bits 5-3
 		and.w #0x7,%d2			| mask to 3 bits
@@ -265,8 +274,8 @@ bad:		movea.l #badinstmsg,%a0		| bad width
 		beq 3f				| yes, pc with displacement
 		cmp.w #0b011,%d0		| pc with index and displacement
 		beq 4f				| yes, pc with index and displacement
-		cmp.w #0b100,%d0		| immediate
-		beq 5f				| yes, immediate
+		cmp.w #0b100,%d0		| imm
+		beq 5f				| yes, imm
 		bra bad				| bad mode
 
 1:		move.b #'(',%d0			| add '(' before absolute word
@@ -289,12 +298,14 @@ bad:		movea.l #badinstmsg,%a0		| bad width
 
 4:		bra bad				| bad mode (pc with index and displacement)
 
-5:		move.w (%a4)+,%d0		| get the immediate word
+5:		move.w (%a4)+,%d0		| get the imm word
 		bsr hexword			| output it
 		bra 100f
 
 100:		movem.l (%sp)+,%d2-%d3/%a0
 		rts
+
+| printing routines
 
 | prints the reg name for data register in d3
 serputdatareg:	movea.l #dataregstr,%a0		| output '%a'
@@ -354,33 +365,52 @@ srsub:		movem.l %a0,-(%sp)
 		.align 2
 
 instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b1111111111111111, \
-			widthbytesub, immediatebyte, ccrsub
+			widthbytesub, immbytesub, ccrsub
 		instruction ori_sr,   "ori",	0b0000000001111100, 0b1111111111111111, \
-			widthwordsub, immediateword, srsub
+			widthwordsub, immwordsub, srsub
 		instruction ori_ea,   "ori",    0b0000000000000000, 0b1111111100000000, \
-			width76sub, immedatebwl, regorea
+			width76sub, immbwlsub, regoreasub
 
 		instruction andi_ccr, "andi",   0b0000001000111100, 0b1111111111111111, \
-			widthbytesub, immediatebyte, ccrsub
+			widthbytesub, immbytesub, ccrsub
 		instruction andi_sr,  "andi",   0b0000001001111100, 0b1111111111111111, \
-			widthwordsub, immediateword, srsub
+			widthwordsub, immwordsub, srsub
 		instruction andi_ea,  "andi"    0b0000001000000000, 0b1111111100000000, \
-			width76sub, immedatebwl, regorea
+			width76sub, immbwlsub, regoreasub
 
 		instruction subi_ea,  "subi",   0b0000010000000000, 0b1111111100000000, \
-			width76sub, immedatebwl, regorea
+			width76sub, immbwlsub, regoreasub
 		instruction addi_ea,  "addi",   0b0000011000000000, 0b1111111100000000, \
-			width76sub, immedatebwl, regorea
+			width76sub, immbwlsub, regoreasub
 
 		instruction eori_ccr, "eori",   0b0000101000111100, 0b1111111111111111, \
-			widthbytesub, immediatebyte, ccrsub
+			widthbytesub, immbytesub, ccrsub
 		instruction eori_sr,  "eori",   0b0000101001111100, 0b1111111111111111, \
-			widthwordsub, immediateword, srsub
+			widthwordsub, immwordsub, srsub
 		instruction eori_ea,  "eori",   0b0000101000000000, 0b1111111100000000, \
-			width76sub, immedatebwl, regorea
+			width76sub, immbwlsub, regoreasub
 
 		instruction cmpi_ea,  "cmpi",   0b0000110000000000, 0b1111111100000000, \
-			width76sub, immedatebwl, regorea
+			width76sub, immbwlsub, regoreasub
+
+		instruction btst_i, "btst",     0b0000100000000000, 0b1111111111000000, \
+			null, immbytesub, regoreasub
+		instruction btst_dr, "btst",    0b0000000100000000, 0b1111000111000000, \
+			null, dreg119sub, regoreasub
+		instruction bchg_i, "bchg",     0b0000100001000000, 0b1111111111000000, \
+			null, immbytesub, regoreasub
+		instruction bchg_dr, "bchg",    0b0000000101000000, 0b1111000111000000, \
+			null, dreg119sub, regoreasub
+		instruction bclr_i, "bclr",     0b0000100010000000, 0b1111111111000000, \
+			null, immbytesub, regoreasub
+		instruction bclr_dr, "bclr",    0b0000000110000000, 0b1111000111000000, \
+			null, dreg119sub, regoreasub
+		instruction bset_i, "bset",     0b0000100011000000, 0b1111111111000000, \
+			null, immbytesub, regoreasub
+		instruction bset_dr, "bset",    0b0000000111000000, 0b1111000111000000, \
+			null, dreg119sub, regoreasub
+
+		| end of table
 		.long 0
 
 nullwidth:	.asciz ""
