@@ -102,7 +102,17 @@ widthwordsub:	movem.l %a0,-(%sp)
 width76sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
-		move.l (%d2.w*4,widthtable),%a0	| get width string
+		move.l (%d2.w*4,twobwidthtable),%a0
+						| get width string
+		bsr serputstr
+		movem.l (%sp)+,%d2/%a0
+		rts
+
+width6sub:	movem.l %d2/%a0,-(%sp)
+		lsr.w #6,%d2			| get bit 6
+		and.w #0x1,%d2			| mask to 1 bit
+		move.l (%d2.w*4,onebwidthtable),%a0
+						| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
@@ -146,9 +156,9 @@ immbwlsub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
 
-		cmp.w #WIDTH_bytesub,%d2		| byte?
+		cmp.w #WIDTH_bytesub,%d2	| byte?
 		beq 1f				| yes, byte
-		cmp.w #WIDTH_wordsub,%d2		| word?
+		cmp.w #WIDTH_wordsub,%d2	| word?
 		beq 2f				| yes, word
 		cmp.w #WIDTH_LONG,%d2		| long?
 		beq 3f				| yes, long
@@ -173,64 +183,72 @@ immbwlsub:	movem.l %d2/%a0,-(%sp)
 
 regoreasub:	movem.l %d2-%d3/%a0,-(%sp)
 		move.l %d2,%d3			| save original instruction word
-		lsr.w #3,%d2			| get bits 5-3
-		and.w #0x7,%d2			| mask to 3 bits
-		cmp.w #0b000,%d2		| data register
+		lsr.w #3,%d3			| get bits 5-3
+		and.w #0x7,%d3			| mask to 3 bits
+		cmp.w #0b000,%d3		| data register
 		beq 1f				| yes, data register
-		cmp.w #0b001,%d2		| address register
+		cmp.w #0b001,%d3		| address register
 		beq 2f				| yes, address register
-		cmp.w #0b010,%d2		| address register indirect
+		cmp.w #0b010,%d3		| address register indirect
 		beq 3f				| yes, address register indirect
-		cmp.w #0b011,%d2		| address register indirect with postincrement
+		cmp.w #0b011,%d3		| address register indirect with postincrement
 		beq 4f				| yes, address register indirect with postincrement
-		cmp.w #0b100,%d2		| address register indirect with predecrement
+		cmp.w #0b100,%d3		| address register indirect with predecrement
 		beq 5f				| yes, address register indirect with predecrement
-		cmp.w #0b101,%d2		| address with displacement
+		cmp.w #0b101,%d3		| address with displacement
 		beq 6f				| yes, address with displacement
-		cmp.w #0b110,%d2		| address register with index and displacement
+		cmp.w #0b110,%d3		| address register with index and displacement
 		beq 7f				| yes, address with index and displacement
-		cmp.w #0b111,%d2		| other modes
+		cmp.w #0b111,%d3		| other modes
 		beq 10f				| yes, modes switched on register field
 
 bad:		movea.l #badinstmsg,%a0		| bad width
 		bsr serputstr			| output bad instruction message
 		bra 100f
 
-1:		move.b %d3,%d0			| get original instruction word
+dregsub:	movem.l %d2-%d3/%a0,-(%sp)
+1:		move.b %d2,%d0			| get original instruction word
 		bsr serputdatareg		| output '%d'
 		bra 100f
-2:		move.b %d3,%d0			| get original instruction word
+
+aregsub:	movem.l %d2-%d3/%a0,-(%sp)
+2:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrreg		| output '%a'
 		bra 100f
 
-3:		move.b %d3,%d0			| get original instruction word
+aregisub:	movem.l %d2-%d3/%a0,-(%sp)
+3:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
-4:		move.b %d3,%d0			| get original instruction word
+aregiincsub:	movem.l %d2-%d3/%a0,-(%sp)
+4:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		move.b #'+',%d0			| add '+' after ea
 		bsr serputchar			| output '+'
 		bra 100f
 
+aregidecsub:	movem.l %d2-%d3/%a0,-(%sp)
 5:		move.b #'-',%d0			| add '-' before ea
 		bsr serputchar			| output '-'
-		move.b %d3,%d0			| get original instruction word
+		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
+aregidispsub:	movem.l %d2-%d3/%a0,-(%sp)
 6:		move.b #'(',%d0			| add '(' before ea
 		bsr serputchar			| output '('
 		move.w (%a4)+,%d0		| get the displacement
 		bsr hexword			| output the displacement
 		move.b #',',%d0			| add ',' after displacement
 		bsr serputchar			| output ','
-		move.b %d3,%d0			| get original instruction word
+		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrreg		| output '%a'
 		move.b #')',%d0			| add ')' after ea
 		bsr serputchar			| output ')'
 		bra 100f
 
+aregiindexsub:	movem.l %d2-%d3/%a0,-(%sp)
 7:		move.b #'(',%d0			| add '(' before extension word
 		bsr serputchar			| output '(')'
 		move.w (%a4)+,%d4		| get the extension word
@@ -239,7 +257,7 @@ bad:		movea.l #badinstmsg,%a0		| bad width
 		bsr hexbyte			| output low byte offset (signed!)
 		move.b #',',%d0			| add ',' between bytes
 		bsr serputchar			| output ','
-		move.w %d3,%d0			| restore original instruction word
+		move.w %d2,%d0			| restore original instruction word
 		bsr serputaddrreg		| output register number
 		move.b #',',%d0			| add ',' between bytes
 		bsr serputchar			| output ','
@@ -264,7 +282,7 @@ bad:		movea.l #badinstmsg,%a0		| bad width
 		bsr serputchar			| output ','
 		bra 100f
 
-10:		move.w %d3,%d0			| get original instruction word
+10:		move.w %d2,%d0			| get original instruction word
 		and.w #0x7,%d0			| mask to 3 bits
 		cmp.w #0b000,%d0		| absolute word
 		beq 1f				| yes, absolute word
@@ -393,6 +411,14 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction cmpi_ea,  "cmpi",   0b0000110000000000, 0b1111111100000000, \
 			width76sub, immbwlsub, regoreasub
 
+		| movep instructions must be before memory btst instructions to avoid
+		| false matches
+		instruction movep_wr,  "movep",  0b0000000100001000, 0b1111000110111000, \
+			width6sub, aregidispsub, dreg119sub // write to register
+		instruction movep_wm,  "movep",  0b0000000110001000, 0b1111000110111000, \
+			width6sub, dreg119sub, aregidispsub // write to memory
+
+
 		instruction btst_i, "btst",     0b0000100000000000, 0b1111111111000000, \
 			null, immbytesub, regoreasub
 		instruction btst_dr, "btst",    0b0000000100000000, 0b1111000111000000, \
@@ -418,8 +444,8 @@ bytewidth:	.asciz ".b"
 wordwidth:	.asciz ".w"
 longwidth:	.asciz ".l"
 
-widthtable:	.long bytewidth
-		.long wordwidth
+twobwidthtable:	.long bytewidth
+onebwidthtable:	.long wordwidth
 		.long longwidth
 
 hex:		.asciz "0x"

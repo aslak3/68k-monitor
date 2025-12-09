@@ -21,4 +21,5 @@ disasstest:	ori.b #0x12,%ccr
 		bclr %d4,%d5
 		bset.b #7,(0x100,%a3)
 		bset %d6,%d7
-
+		movep.w %d1,(0x1234,%a2)
+		movep.l (0x4321,%a3),%a4
