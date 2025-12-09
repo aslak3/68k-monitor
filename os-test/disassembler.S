@@ -150,6 +150,15 @@ dreg119sub:	movem.l %d2/%a0,-(%sp)
 		movem.l (%sp)+,%d2/%a0
 		rts
 
+areg119sub:	movem.l %d2/%a0,-(%sp)
+		lsr.w #8,%d2			| get bits 11-9
+		lsr.w #1,%d2			| needs one more shift
+		and.w #0x7,%d2			| mask to 3 bits
+		move.b %d2,%d0			| move to d0 for output
+		bsr serputaddrreg		| output '%a'
+		movem.l (%sp)+,%d2/%a0
+		rts
+
 immbwlsub:	movem.l %d2/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -316,8 +325,10 @@ aregiindexsub:	movem.l %d2-%d3/%a0,-(%sp)
 
 4:		bra bad				| bad mode (pc with index and displacement)
 
-5:		move.w (%a4)+,%d0		| get the imm word
-		bsr hexword			| output it
+5:		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
+		move.l (%a4)+,%d0		| get the imm word
+		bsr hexlong			| output it
 		bra 100f
 
 100:		movem.l (%sp)+,%d2-%d3/%a0
@@ -418,6 +429,10 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction movep_wm,  "movep",  0b0000000110001000, 0b1111000110111000, \
 			width6sub, dreg119sub, aregidispsub // write to memory
 
+		instruction movea_wrw, "movea.w",   0b0011000001000000, 0b1111000111000000, \
+			null, regoreasub, areg119sub
+		instruction movea_wrl, "movea.l",   0b0010000001000000, 0b1111000111000000, \
+			null, regoreasub, areg119sub
 
 		instruction btst_i, "btst",     0b0000100000000000, 0b1111111111000000, \
 			null, immbytesub, regoreasub
@@ -435,6 +450,8 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, immbytesub, regoreasub
 		instruction bset_dr, "bset",    0b0000000111000000, 0b1111000111000000, \
 			null, dreg119sub, regoreasub
+
+
 
 		| end of table
 		.long 0
