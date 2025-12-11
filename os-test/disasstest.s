@@ -25,3 +25,11 @@ disasstest:	ori.b #0x12,%ccr
 		movep.l (0x4321,%a3),%d4
 		movea.l #0x12345678,%a5
 		movea.w (0x12,%d2.l,%a4),%a5
+		move.b %d1,(0x100,%a2)
+		move.w %d2,-(%a3)
+		move.l %d3,%d4
+		move.b (0x200,%a4),%d5
+		move.w %d6,(%a5)
+		move.l (0x12,%d2.l,%a4),(0x34,%d1.w,%a5)
+		move.l #0xdeadbeef,%d7
+		move.w (0x12345678),(0x9abcdef0)

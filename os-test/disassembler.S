@@ -190,11 +190,22 @@ immbwlsub:	movem.l %d2/%a0,-(%sp)
 100:		movem.l (%sp)+,%d2/%a0
 		rts
 
-regoreasub:	movem.l %d2-%d3/%a0,-(%sp)
-		move.l %d2,%d3			| save original instruction word
-		lsr.w #3,%d3			| get bits 5-3
+moderightsub:	movem.l %d2-%d3/%a0,-(%sp)
+		move.l %d2,%d3			| copy original instruction word
+		and.w #0x7,%d2			| d2 holds register only
+		lsr.w #3,%d3			| d3 holds mode only, get bits 5-3
 		and.w #0x7,%d3			| mask to 3 bits
-		cmp.w #0b000,%d3		| data register
+		bra 1f
+
+modeleftsub:	movem.l %d2-%d3/%a0,-(%sp)
+		move.l %d2,%d3			| copy original instruction word
+		lsr.w #8,%d2			| d2 holds register only
+		lsr.w #1,%d2			| needs one more shift
+		and.w #0x7,%d2			| d2 holds register only
+		lsr.w #6,%d3			| d3 holds mode only, get bits 8-6
+		and.w #0x7,%d3			| mask to 3 bits
+
+1:		cmp.w #0b000,%d3		| data register
 		beq 1f				| yes, data register
 		cmp.w #0b001,%d3		| address register
 		beq 2f				| yes, address register
@@ -398,29 +409,29 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction ori_sr,   "ori",	0b0000000001111100, 0b1111111111111111, \
 			widthwordsub, immwordsub, srsub
 		instruction ori_ea,   "ori",    0b0000000000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, regoreasub
+			width76sub, immbwlsub, moderightsub
 
 		instruction andi_ccr, "andi",   0b0000001000111100, 0b1111111111111111, \
 			widthbytesub, immbytesub, ccrsub
 		instruction andi_sr,  "andi",   0b0000001001111100, 0b1111111111111111, \
 			widthwordsub, immwordsub, srsub
 		instruction andi_ea,  "andi"    0b0000001000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, regoreasub
+			width76sub, immbwlsub, moderightsub
 
 		instruction subi_ea,  "subi",   0b0000010000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, regoreasub
+			width76sub, immbwlsub, moderightsub
 		instruction addi_ea,  "addi",   0b0000011000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, regoreasub
+			width76sub, immbwlsub, moderightsub
 
 		instruction eori_ccr, "eori",   0b0000101000111100, 0b1111111111111111, \
 			widthbytesub, immbytesub, ccrsub
 		instruction eori_sr,  "eori",   0b0000101001111100, 0b1111111111111111, \
 			widthwordsub, immwordsub, srsub
 		instruction eori_ea,  "eori",   0b0000101000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, regoreasub
+			width76sub, immbwlsub, moderightsub
 
 		instruction cmpi_ea,  "cmpi",   0b0000110000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, regoreasub
+			width76sub, immbwlsub, moderightsub
 
 		| movep instructions must be before memory btst instructions to avoid
 		| false matches
@@ -430,26 +441,33 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			width6sub, dreg119sub, aregidispsub // write to memory
 
 		instruction movea_wrw, "movea.w",   0b0011000001000000, 0b1111000111000000, \
-			null, regoreasub, areg119sub
+			null, moderightsub, areg119sub
 		instruction movea_wrl, "movea.l",   0b0010000001000000, 0b1111000111000000, \
-			null, regoreasub, areg119sub
+			null, moderightsub, areg119sub
+
+		instruction move_wrb, "move.b",     0b0001000000000000, 0b1111000000000000, \
+			null, moderightsub, modeleftsub
+		instruction move_wrw, "move.w",     0b0011000000000000, 0b1111000000000000, \
+			null, moderightsub, modeleftsub
+		instruction move_wrl, "move.l",     0b0010000000000000, 0b1111000000000000, \
+			null, moderightsub, modeleftsub
 
 		instruction btst_i, "btst",     0b0000100000000000, 0b1111111111000000, \
-			null, immbytesub, regoreasub
+			null, immbytesub, moderightsub
 		instruction btst_dr, "btst",    0b0000000100000000, 0b1111000111000000, \
-			null, dreg119sub, regoreasub
+			null, dreg119sub, moderightsub
 		instruction bchg_i, "bchg",     0b0000100001000000, 0b1111111111000000, \
-			null, immbytesub, regoreasub
+			null, immbytesub, moderightsub
 		instruction bchg_dr, "bchg",    0b0000000101000000, 0b1111000111000000, \
-			null, dreg119sub, regoreasub
+			null, dreg119sub, moderightsub
 		instruction bclr_i, "bclr",     0b0000100010000000, 0b1111111111000000, \
-			null, immbytesub, regoreasub
+			null, immbytesub, moderightsub
 		instruction bclr_dr, "bclr",    0b0000000110000000, 0b1111000111000000, \
-			null, dreg119sub, regoreasub
+			null, dreg119sub, moderightsub
 		instruction bset_i, "bset",     0b0000100011000000, 0b1111111111000000, \
-			null, immbytesub, regoreasub
+			null, immbytesub, moderightsub
 		instruction bset_dr, "bset",    0b0000000111000000, 0b1111000111000000, \
-			null, dreg119sub, regoreasub
+			null, dreg119sub, moderightsub
 
 
 
