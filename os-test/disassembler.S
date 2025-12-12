@@ -466,21 +466,21 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction move_wrl, "move",     0b0010000000000000, 0b1111000000000000, \
 			widthlongsub, moderightsub, modeleftsub
 
-		instruction btst_i, "btst",     0b0000100000000000, 0b1111111111000000, \
+		instruction btst_i, "btst",       0b0000100000000000, 0b1111111111000000, \
 			null, immbytesub, moderightsub
-		instruction btst_dr, "btst",    0b0000000100000000, 0b1111000111000000, \
+		instruction btst_dr, "btst",      0b0000000100000000, 0b1111000111000000, \
 			null, dreg119sub, moderightsub
-		instruction bchg_i, "bchg",     0b0000100001000000, 0b1111111111000000, \
+		instruction bchg_i, "bchg",       0b0000100001000000, 0b1111111111000000, \
 			null, immbytesub, moderightsub
-		instruction bchg_dr, "bchg",    0b0000000101000000, 0b1111000111000000, \
+		instruction bchg_dr, "bchg",      0b0000000101000000, 0b1111000111000000, \
 			null, dreg119sub, moderightsub
-		instruction bclr_i, "bclr",     0b0000100010000000, 0b1111111111000000, \
+		instruction bclr_i, "bclr",       0b0000100010000000, 0b1111111111000000, \
 			null, immbytesub, moderightsub
-		instruction bclr_dr, "bclr",    0b0000000110000000, 0b1111000111000000, \
+		instruction bclr_dr, "bclr",      0b0000000110000000, 0b1111000111000000, \
 			null, dreg119sub, moderightsub
-		instruction bset_i, "bset",     0b0000100011000000, 0b1111111111000000, \
+		instruction bset_i, "bset",       0b0000100011000000, 0b1111111111000000, \
 			null, immbytesub, moderightsub
-		instruction bset_dr, "bset",    0b0000000111000000, 0b1111000111000000, \
+		instruction bset_dr, "bset",      0b0000000111000000, 0b1111000111000000, \
 			null, dreg119sub, moderightsub
 
 		instruction move_from_sr, "move", 0b0100000011000000, 0b1111111111000000, \
@@ -489,6 +489,25 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			widthwordsub, moderightsub, ccrsub
 		instruction move_to_sr, "move",   0b0100011011000000, 0b1111111111000000, \
 			widthwordsub, moderightsub, srsub
+
+		instruction negx_ea,   "negx",    0b0100000000000000, 0b1111111100000000, \
+			width76sub, null, moderightsub
+		instruction clr_ea,   "clr",      0b0100001000000000, 0b1111111100000000, \
+			width76sub, null, moderightsub
+		instruction neg_ea,   "neg",      0b0100010000000000, 0b1111111100000000, \
+			width76sub, null, moderightsub
+		instruction not_ea,   "not",      0b0100011000000000, 0b1111111100000000, \
+			width76sub, null, moderightsub
+
+		instruction ext_wl,    "ext",     0b0100100010000000, 0b1111111110111000, \
+			width6sub, null, dregsub
+		instruction nbcd_ea,   "nbcd",    0b0100100000000000, 0b1111111111000000, \
+			null, null, moderightsub
+		instruction swap_d,    "swap",    0b0100100001000000, 0b1111111111111000, \
+			null, null, dregsub
+
+		instruction pea_ea,    "pea",     0b0100100001000000, 0b1111111111000000, \
+			null, null, moderightsub
 
 		| end of table
 		.long 0

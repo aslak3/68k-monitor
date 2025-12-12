@@ -38,9 +38,16 @@ disasstest:	ori.b #0x12,%ccr
 		move.w (0x1234,%a1),%ccr
 		move.w (%a2),%sr
 		move.w #0x3456,%sr
-
-
-
+		negx.b (0x100,%a3)
+		clr.w %d4
+		neg.l (0xdeadbeef)
+		not.l (0x2a,%d1.w,%a2)
+		ext.w %d5
+		ext.l %d6
+		nbcd (%d1,%a4)
+		swap %d7
+		pea (0x1234,%a5)
+		pea (%a0)
 		nop
 
 		rts
