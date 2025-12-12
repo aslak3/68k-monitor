@@ -126,6 +126,15 @@ width6sub:	movem.l %d2/%a0,-(%sp)
 		movem.l (%sp)+,%d2/%a0
 		rts
 
+nybble30sub:	movem.l %d2/%a0,-(%sp)
+		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
+		move.w %d2,%d0			| copy original instruction word
+		and.w #0xf,%d0			| mask to 4 bits
+		bsr hexbyte			| output the nybble sorta
+		movem.l (%sp)+,%d2/%a0
+		rts
+
 immbytesub:	movem.l %d0/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -415,6 +424,12 @@ srsub:		movem.l %a0,-(%sp)
 		movem.l (%sp)+,%a0
 		rts
 
+uspsub:		movem.l %a0,-(%sp)
+		movea.l #uspstr,%a0
+		bsr serputstr
+		movem.l (%sp)+,%a0
+		rts
+
 		.section .rodata
 		.align 2
 
@@ -509,6 +524,35 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction pea_ea,    "pea",     0b0100100001000000, 0b1111111111000000, \
 			null, null, moderightsub
 
+		instruction illegal,   "illegal", 0b0100101011111100, 0b1111111111111111, \
+			null, null, null
+
+		instruction tas_ea,    "tas",     0b0100101011000000, 0b1111111111000000, \
+			null, null, moderightsub
+		instruction tst_ea,    "tst",     0b0100101000000000, 0b1111111100000000, \
+			width76sub, null, moderightsub
+
+		instruction trap,     "trap",     0b0100111001000000, 0b1111111111110000, \
+			null, null, nybble30sub
+
+		instruction link,      "link",    0b0100111001010000, 0b1111111111111000, \
+			widthwordsub, aregsub, immwordsub
+		instruction unlk,      "unlk",    0b0100111001011000, 0b1111111111111000, \
+			null, null, aregsub
+
+		instruction move_to_usp   "move", 0b0100111001100000, 0b1111111111111000, \
+			widthlongsub, aregsub, uspsub
+		instruction move_from_usp "move", 0b0100111001101000, 0b1111111111111000, \
+			widthlongsub, uspsub, aregsub
+
+		instruction reset,   "reset",     0b0100111001110000, 0b1111111111111111, \
+			null, null, null
+		instruction nop,   "nop",         0b0100111001110001, 0b1111111111111111, \
+			null, null, null
+		instruction stop,   "stop",       0b0100111001110010, 0b1111111111111111, \
+			null, null, immwordsub
+
+
 		| end of table
 		.long 0
 
@@ -525,6 +569,7 @@ hex:		.asciz "0x"
 
 ccrstr:		.asciz "%ccr"
 srstr:		.asciz "%sr"
+uspstr:		.asciz "%usp"
 dataregstr:	.asciz "%d"
 addrregstr:	.asciz "%a"
 

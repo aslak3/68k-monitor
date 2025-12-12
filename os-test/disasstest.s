@@ -48,6 +48,18 @@ disasstest:	ori.b #0x12,%ccr
 		swap %d7
 		pea (0x1234,%a5)
 		pea (%a0)
+		illegal
+		tas (0x12,%d2.l,%a4)
+		tst.w %d5
+		tst.l (0xdeadbeef)
+		tst.b (0x2a,%d1.w,%a2)
+		trap #0xf
+		link.w %a5,#0x5432
+		unlk %a6
+		move.l %a0,%usp
+		move.l %usp,%a2
+		reset
 		nop
+		stop #0x1234
 
 		rts
