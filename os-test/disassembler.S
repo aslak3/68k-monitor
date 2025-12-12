@@ -6,8 +6,8 @@
 
 		.global disassemble
 
-		.equ WIDTH_bytesub, 0
-		.equ WIDTH_wordsub, 1
+		.equ WIDTH_BYTE, 0
+		.equ WIDTH_WORD, 1
 		.equ WIDTH_LONG, 2
 
 		.equ INST_NAME, 0
@@ -174,9 +174,9 @@ immbwlsub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
 
-		cmp.w #WIDTH_bytesub,%d2	| byte?
+		cmp.w #WIDTH_BYTE,%d2		| byte?
 		beq 1f				| yes, byte
-		cmp.w #WIDTH_wordsub,%d2	| word?
+		cmp.w #WIDTH_WORD,%d2		| word?
 		beq 2f				| yes, word
 		cmp.w #WIDTH_LONG,%d2		| long?
 		beq 3f				| yes, long
