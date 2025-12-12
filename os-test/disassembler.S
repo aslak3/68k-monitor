@@ -60,6 +60,8 @@ disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 		debugprint "Instruction name", SECTION_DISASSEMBLER, REG_A0
 		bsr serputstr			| output instruction name
 
+		moveq #0,%d6			| clear d6 means word width by default
+
 		movea.l (INST_WIDTHSUB,%a1),%a0	| get width extraction routine
 		tst.l %a0			| no width?
 		beq 1f				| skip it
@@ -96,6 +98,13 @@ widthbytesub:	movem.l %a0,-(%sp)
 widthwordsub:	movem.l %a0,-(%sp)
 		movea.l #wordwidth,%a0
 		bsr serputstr
+		movem.l (%sp)+,%a0
+		rts
+
+widthlongsub:	movem.l %a0,-(%sp)
+		movea.l #longwidth,%a0
+		bsr serputstr
+		moveq #1,%d6			| set d6 means word width by default
 		movem.l (%sp)+,%a0
 		rts
 
@@ -338,7 +347,12 @@ aregiindexsub:	movem.l %d2-%d3/%a0,-(%sp)
 
 5:		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
-		move.l (%a4)+,%d0		| get the imm word
+		tst.w %d6			| check width in d6
+		bne 1f				| long width?
+		move.w (%a4)+,%d0		| get the imm word
+		bsr hexword			| output it
+		bra 100f
+1:		move.l (%a4)+,%d0		| get the imm long
 		bsr hexlong			| output it
 		bra 100f
 
@@ -440,17 +454,17 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction movep_wm,  "movep",  0b0000000110001000, 0b1111000110111000, \
 			width6sub, dreg119sub, aregidispsub // write to memory
 
-		instruction movea_wrw, "movea.w",   0b0011000001000000, 0b1111000111000000, \
-			null, moderightsub, areg119sub
-		instruction movea_wrl, "movea.l",   0b0010000001000000, 0b1111000111000000, \
-			null, moderightsub, areg119sub
+		instruction movea_wrw, "movea",   0b0011000001000000, 0b1111000111000000, \
+			widthwordsub, moderightsub, areg119sub
+		instruction movea_wrl, "movea",   0b0010000001000000, 0b1111000111000000, \
+			widthlongsub, moderightsub, areg119sub
 
-		instruction move_wrb, "move.b",     0b0001000000000000, 0b1111000000000000, \
-			null, moderightsub, modeleftsub
-		instruction move_wrw, "move.w",     0b0011000000000000, 0b1111000000000000, \
-			null, moderightsub, modeleftsub
-		instruction move_wrl, "move.l",     0b0010000000000000, 0b1111000000000000, \
-			null, moderightsub, modeleftsub
+		instruction move_wrb, "move",     0b0001000000000000, 0b1111000000000000, \
+			widthbytesub, moderightsub, modeleftsub
+		instruction move_wrw, "move",     0b0011000000000000, 0b1111000000000000, \
+			widthwordsub, moderightsub, modeleftsub
+		instruction move_wrl, "move",     0b0010000000000000, 0b1111000000000000, \
+			widthlongsub, moderightsub, modeleftsub
 
 		instruction btst_i, "btst",     0b0000100000000000, 0b1111111111000000, \
 			null, immbytesub, moderightsub
@@ -469,7 +483,12 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction bset_dr, "bset",    0b0000000111000000, 0b1111000111000000, \
 			null, dreg119sub, moderightsub
 
-
+		instruction move_from_sr, "move", 0b0100000011000000, 0b1111111111000000, \
+			widthwordsub, srsub, moderightsub
+		instruction move_to_ccr, "move",  0b0100010011000000, 0b1111111111000000, \
+			widthwordsub, moderightsub, ccrsub
+		instruction move_to_sr, "move",   0b0100011011000000, 0b1111111111000000, \
+			widthwordsub, moderightsub, srsub
 
 		| end of table
 		.long 0

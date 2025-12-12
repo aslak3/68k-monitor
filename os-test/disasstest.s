@@ -33,3 +33,14 @@ disasstest:	ori.b #0x12,%ccr
 		move.l (0x12,%d2.l,%a4),(0x34,%d1.w,%a5)
 		move.l #0xdeadbeef,%d7
 		move.w (0x12345678),(0x9abcdef0)
+		move.w %sr,(0xdeadbeef)
+		move.w #0x2a,%ccr
+		move.w (0x1234,%a1),%ccr
+		move.w (%a2),%sr
+		move.w #0x3456,%sr
+
+
+
+		nop
+
+		rts
