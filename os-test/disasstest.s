@@ -61,5 +61,11 @@ disasstest:	ori.b #0x12,%ccr
 		reset
 		nop
 		stop #0x1234
+		rte
+		rts
+		trapv
+		rtr
+		movem.l (%sp)+,%d0-%d2/%a0
+		movem.w %a0-%a7,(0x12345678)
 
 		rts

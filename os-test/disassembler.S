@@ -551,6 +551,20 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, null, null
 		instruction stop,   "stop",       0b0100111001110010, 0b1111111111111111, \
 			null, null, immwordsub
+		instruction rte,   "rte",         0b0100111001110011, 0b1111111111111111, \
+			null, null, null
+		instruction rts,   "rts",         0b0100111001110101, 0b1111111111111111, \
+			null, null, null
+		instruction trapv,   "trapv",     0b0100111001110110, 0b1111111111111111, \
+			null, null, null
+		instruction rtr,   "rtr",         0b0100111001110111, 0b1111111111111111, \
+			null, null, null
+
+		instruction movem_wm,   "movem",  0b0100110010000000, 0b1111111110000000, \
+			width6sub, moderightsub, immwordsub
+		instruction movem_wr,   "movem",  0b0100100010000000, 0b1111111110000000, \
+			width6sub, immwordsub, moderightsub
+
 
 
 		| end of table
