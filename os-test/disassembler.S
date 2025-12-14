@@ -37,8 +37,7 @@ disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 
 		move.w (%a4)+,%d2		| fetch the instruction word and keep in d2
 		movea.l #instructions,%a1	| point to start of instruction table
-.testloop:	debugprint "Testing for instruction", SECTION_DISASSEMBLER, REG_A1
-		tst.l (INST_NAME,%a1)		| end of table?
+.testloop:	tst.l (INST_NAME,%a1)		| end of table?
 		beq .badinst			| unknown instruction
 		move.w %d2,%d1			| restore original instruction word
 		and.w (INST_MASK,%a1),%d1	| mask off bits not in pattern
@@ -157,6 +156,38 @@ immlongsub:	movem.l %d0/%a0,-(%sp)
 		move.l (%a4)+,%d0		| get the long
 		bsr hexlong			| output the long
 		movem.l (%sp)+,%d0/%a0
+		rts
+
+movemsub:	movem.l %d1-%d5/%a0,-(%sp)
+		lsr.w #3,%d2			| d3 holds mode only, get bits 5-3
+		and.w #0x7,%d2			| mask to 3 bits
+		cmp.w #0b100,%d2		| address register indirect with predecrement
+		beq 0f				| yes, address register indirect with predecrement
+
+		move.w #1,%d4			| scan direction (up)
+		move.w #0,%d5			| initial bit test pos
+		bra 1f
+
+0:		move.w #-1,%d4			| scan direction (down)
+		move.w #15,%d5			| initial bit test pos
+
+1:		move.w (%a4)+,%d1		| get the register word
+		moveq #0,%d2			| flag to avoid printing first slash
+		move.w #15,%d3			| bit counter
+		movea.l #allregstr,%a0		| count into the list of regs, longs
+2:		btst %d5,%d1			| see if reg bit is set
+		beq 4f				| not set? skip the printing
+		tst.w %d2			| see if this is the first reg
+		beq 3f				| skip printing the first slash
+		move.b #'/',%d0			| printing a slash separator
+		bsr serputchar			| print it
+3:		bsr serputstr			| print the register name
+		suba.l #4,%a0			| restore a0 by jumping back 4
+		moveq #1,%d2			| force printing the slash seps
+4:		add.w %d4,%d5			| scanning the next bit, up or down
+		adda.l #4,%a0			| next reg string
+		dbra %d3,2b			| back for more
+		movem.l (%sp)+,%d1-%d5/%a0
 		rts
 
 dreg119sub:	movem.l %d2/%a0,-(%sp)
@@ -370,11 +401,11 @@ aregiindexsub:	movem.l %d2-%d3/%a0,-(%sp)
 
 | printing routines
 
-| prints the reg name for data register in d3
+| prints the reg name for data register in d0, changing d0
 serputdatareg:	movea.l #dataregstr,%a0		| output '%a'
 		bra 1f
 
-| prints the reg name for address register in d3
+| prints the reg name for address register in d0, changing d0
 serputaddrreg:	movea.l #addrregstr,%a0		| output '%a'
 		bra 1f
 
@@ -560,12 +591,10 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction rtr,   "rtr",         0b0100111001110111, 0b1111111111111111, \
 			null, null, null
 
-		instruction movem_wm,   "movem",  0b0100110010000000, 0b1111111110000000, \
-			width6sub, moderightsub, immwordsub
 		instruction movem_wr,   "movem",  0b0100100010000000, 0b1111111110000000, \
-			width6sub, immwordsub, moderightsub
-
-
+			width6sub, movemsub, moderightsub
+		instruction movem_wm,   "movem",  0b0100110010000000, 0b1111111110000000, \
+			width6sub, moderightsub, movemsub
 
 		| end of table
 		.long 0
@@ -586,5 +615,25 @@ srstr:		.asciz "%sr"
 uspstr:		.asciz "%usp"
 dataregstr:	.asciz "%d"
 addrregstr:	.asciz "%a"
+
+allregstr:
+alldregstr:
+d0regstr:	.asciz "%d0"
+d1regstr:	.asciz "%d1"
+d2regstr:	.asciz "%d2"
+d3regstr:	.asciz "%d3"
+d4regstr:	.asciz "%d4"
+d5regstr:	.asciz "%d5"
+d6regstr:	.asciz "%d6"
+d7regstr:	.asciz "%d7"
+allaregstr:
+a0regstr:	.asciz "%a0"
+a1regstr:	.asciz "%a1"
+a2regstr:	.asciz "%a2"
+a3regstr:	.asciz "%a3"
+a4regstr:	.asciz "%a4"
+a5regstr:	.asciz "%a5"
+a6regstr:	.asciz "%a6"
+a7regstr:	.asciz "%a7"
 
 badinstmsg:	.asciz "<bad instruction>"

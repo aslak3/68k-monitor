@@ -65,7 +65,15 @@ disasstest:	ori.b #0x12,%ccr
 		rts
 		trapv
 		rtr
-		movem.l (%sp)+,%d0-%d2/%a0
-		movem.w %a0-%a7,(0x12345678)
+		movem.w %d0/%a2-%a3,-(%sp)
+		movem.l (%sp)+,%d0-%d6/%a5
+		movem.w %d0,-(%sp)
+		movem.l (%sp)+,%d0
+		movem.w %d0,(%sp)
+		movem.l (%sp),%d0
+		movem.w %d0,(0x1)
+		movem.l (0x1),%d0
+
+
 
 		rts
