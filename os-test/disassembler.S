@@ -125,11 +125,31 @@ width6sub:	movem.l %d2/%a0,-(%sp)
 		movem.l (%sp)+,%d2/%a0
 		rts
 
-nybble30sub:	movem.l %d2/%a0,-(%sp)
+condsub:	movem.l %a0,-(%sp)
+		move.w %d2,%d0			| copy original instruction word
+		lsr.w #6,%d0			| shift most of the way
+		and.w #0x003c,%d0		| mask to 4 bits, but up 2
+		lea (allcondstr,%d0.w),%a0	| get the condition string
+		bsr serputstr			| output it
+		movem.l (%sp)+,%a0
+		rts
+
+data30sub:	movem.l %d2/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w %d2,%d0			| copy original instruction word
 		and.w #0xf,%d0			| mask to 4 bits
+		bsr hexbyte			| output the nybble sorta
+		movem.l (%sp)+,%d2/%a0
+		rts
+
+data119sub:	movem.l %d2/%a0,-(%sp)
+		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
+		move.w %d2,%d0			| copy original instruction word
+		lsr.w #8,%d0			| shift most of the way
+		lsr.w #1,%d0			| get the data at 11-9
+		and.w #0x7,%d0			| mask to 3 bits
 		bsr hexbyte			| output the nybble sorta
 		movem.l (%sp)+,%d2/%a0
 		rts
@@ -564,7 +584,7 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			width76sub, null, moderightsub
 
 		instruction trap,     "trap",     0b0100111001000000, 0b1111111111110000, \
-			null, null, nybble30sub
+			null, null, data30sub
 
 		instruction link,      "link",    0b0100111001010000, 0b1111111111111000, \
 			widthwordsub, aregsub, immwordsub
@@ -595,6 +615,22 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			width6sub, movemsub, moderightsub
 		instruction movem_wm,   "movem",  0b0100110010000000, 0b1111111110000000, \
 			width6sub, moderightsub, movemsub
+
+		instruction lea, "lea",           0b0100000111000000, 0b1111000111000000, \
+			widthwordsub, moderightsub, areg119sub
+
+		instruction chk, "chk",           0b0100000110000000, 0b1111000111000000, \
+			widthwordsub, moderightsub, dreg119sub
+
+		instruction dbcc "db",            0b0101000011001000, 0b1111000011111000, \
+			condsub, dregsub, immwordsub
+		instruction scc "s",              0b0101000011000000, 0b1111000011000000, \
+			condsub, null, moderightsub
+
+		instruction addq "addq",          0b0101000000000000, 0b1111000100000000, \
+			width76sub, data119sub, moderightsub
+		instruction subq "subq",          0b0101000100000000, 0b1111000100000000, \
+			width76sub, data119sub, moderightsub
 
 		| end of table
 		.long 0
@@ -635,5 +671,22 @@ a4regstr:	.asciz "%a4"
 a5regstr:	.asciz "%a5"
 a6regstr:	.asciz "%a6"
 a7regstr:	.asciz "%a7"
+
+allcondstr:	.ascii "t\0\0\0"
+		.ascii "f\0\0\0"
+		.ascii "hi\0\0"
+		.ascii "ls\0\0"
+		.ascii "cc\0\0"
+		.ascii "cs\0\0"
+		.ascii "ne\0\0"
+		.ascii "eq\0\0"
+		.ascii "vc\0\0"
+		.ascii "vs\0\0"
+		.ascii "pl\0\0"
+		.ascii "mi\0\0"
+		.ascii "ge\0\0"
+		.ascii "lt\0\0"
+		.ascii "gt\0\0"
+		.ascii "le\0\0"
 
 badinstmsg:	.asciz "<bad instruction>"

@@ -73,7 +73,11 @@ disasstest:	ori.b #0x12,%ccr
 		movem.l (%sp),%d0
 		movem.w %d0,(0x1)
 		movem.l (0x1),%d0
-
-
+		lea (%a5,%d2.w),%a2
+		chk.w (0x12345678),%d2
+		addq.l #5,(0x1234,%a2)
+		subq.l #1,%a2
+		seq (0xcabba6e0)
+		dbpl %d5,disasstest
 
 		rts
