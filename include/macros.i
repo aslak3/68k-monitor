@@ -207,7 +207,7 @@ _\@:		.asciz "\message"
 .endif
 .endm
 
-.macro instruction label, name, pattern, mask, widthfunc, srcfunc, dstfunc
+.macro instruction label, name, pattern, mask, condfunc, widthfunc, srcfunc, dstfunc
 		.section .rodata.instructions.names
 		.align 2
 name_\label:	.asciz "\name"
@@ -216,6 +216,7 @@ name_\label:	.asciz "\name"
 		.long name_\label		| name pointer
 		.word \pattern			| bit pattern
 		.word \mask			| mask
+		.long \condfunc			| ending (before width) of name like eq
 		.long \widthfunc		| width extraction routine
 		.long \srcfunc			| source extraction routine
 		.long \dstfunc			| destination extraction routine

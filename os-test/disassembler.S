@@ -13,10 +13,11 @@
 		.equ INST_NAME, 0
 		.equ INST_PATTERN, 4
 		.equ INST_MASK, 6
-		.equ INST_WIDTHSUB, 8
-		.equ INST_SRCSUB, 12
-		.equ INST_DSTSUB, 16
-		.equ INST_LENGTH, 20
+		.equ INST_CONDSUB, 8
+		.equ INST_WIDTHSUB, 12
+		.equ INST_SRCSUB, 16
+		.equ INST_DSTSUB, 20
+		.equ INST_LENGTH, 24
 
 
 | disassemble the code from the given address at a0 for the given length in words at d0
@@ -59,7 +60,12 @@ disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 		debugprint "Instruction name", SECTION_DISASSEMBLER, REG_A0
 		bsr serputstr			| output instruction name
 
-		moveq #0,%d6			| clear d6 means word width by default
+		movea.l (INST_CONDSUB,%a1),%a0	| get condition extraction routine
+		tst.l %a0			| no condition?
+		beq 1f				| skip it
+		jsr (%a0)			| call condition extraction routine
+
+1:		moveq #0,%d6			| clear d6 means word width by default
 
 		movea.l (INST_WIDTHSUB,%a1),%a0	| get width extraction routine
 		tst.l %a0			| no width?
@@ -89,19 +95,19 @@ disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 | extraction routines
 
 widthbytesub:	movem.l %a0,-(%sp)
-		movea.l #bytewidth,%a0
+		movea.l #bytewidthstr,%a0
 		bsr serputstr
 		movem.l (%sp)+,%a0
 		rts
 
 widthwordsub:	movem.l %a0,-(%sp)
-		movea.l #wordwidth,%a0
+		movea.l #wordwidthstr,%a0
 		bsr serputstr
 		movem.l (%sp)+,%a0
 		rts
 
 widthlongsub:	movem.l %a0,-(%sp)
-		movea.l #longwidth,%a0
+		movea.l #longwidthstr,%a0
 		bsr serputstr
 		moveq #1,%d6			| set d6 means word width by default
 		movem.l (%sp)+,%a0
@@ -111,7 +117,7 @@ width76sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
 		move.l (%d2.w*4,twobwidthtable),%a0
-						| get width string
+			 			| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
@@ -120,9 +126,30 @@ width6sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #6,%d2			| get bit 6
 		and.w #0x1,%d2			| mask to 1 bit
 		move.l (%d2.w*4,onebwidthtable),%a0
-						| get width string
+			 			| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
+		rts
+
+widthdispsub:	movem.l %a0,-(%sp)
+		tst.b %d2			| look at displacement
+		beq 1f				| 0 means word
+		movea.l #bytewidthstr,%a0	| so its a byte dispplacement
+		bra 2f				| skip ahead
+1:		movea.l #wordwidthstr,%a0	| so it's a word dispplacement
+2:		bsr serputstr			| print the width suffix
+		movem.l (%sp)+,%a0
+		rts
+
+dispsub:	movem.l %a0,-(%sp)
+		move.b %d2,%d0			| get the displacement
+		tst.b %d2			| look at displacement
+		beq 1f				| 0 means word
+		bsr hexbyte			| print the displacement
+		bra 2f				| continue
+1:		move.w (%a4)+,%d0		| get the word
+		bsr hexword
+2:		movem.l (%sp)+,%a0
 		rts
 
 condsub:	movem.l %a0,-(%sp)
@@ -485,164 +512,170 @@ uspsub:		movem.l %a0,-(%sp)
 		.align 2
 
 instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b1111111111111111, \
-			widthbytesub, immbytesub, ccrsub
+			null, widthbytesub, immbytesub, ccrsub
 		instruction ori_sr,   "ori",	0b0000000001111100, 0b1111111111111111, \
-			widthwordsub, immwordsub, srsub
+			null, widthwordsub, immwordsub, srsub
 		instruction ori_ea,   "ori",    0b0000000000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, moderightsub
+			null, width76sub, immbwlsub, moderightsub
 
 		instruction andi_ccr, "andi",   0b0000001000111100, 0b1111111111111111, \
-			widthbytesub, immbytesub, ccrsub
+			null, widthbytesub, immbytesub, ccrsub
 		instruction andi_sr,  "andi",   0b0000001001111100, 0b1111111111111111, \
-			widthwordsub, immwordsub, srsub
+			null, widthwordsub, immwordsub, srsub
 		instruction andi_ea,  "andi"    0b0000001000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, moderightsub
+			null, width76sub, immbwlsub, moderightsub
 
 		instruction subi_ea,  "subi",   0b0000010000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, moderightsub
+			null, width76sub, immbwlsub, moderightsub
 		instruction addi_ea,  "addi",   0b0000011000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, moderightsub
+			null, width76sub, immbwlsub, moderightsub
 
 		instruction eori_ccr, "eori",   0b0000101000111100, 0b1111111111111111, \
-			widthbytesub, immbytesub, ccrsub
+			null, widthbytesub, immbytesub, ccrsub
 		instruction eori_sr,  "eori",   0b0000101001111100, 0b1111111111111111, \
-			widthwordsub, immwordsub, srsub
+			null, widthwordsub, immwordsub, srsub
 		instruction eori_ea,  "eori",   0b0000101000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, moderightsub
+			null, width76sub, immbwlsub, moderightsub
 
 		instruction cmpi_ea,  "cmpi",   0b0000110000000000, 0b1111111100000000, \
-			width76sub, immbwlsub, moderightsub
+			null, width76sub, immbwlsub, moderightsub
 
 		| movep instructions must be before memory btst instructions to avoid
 		| false matches
 		instruction movep_wr,  "movep",  0b0000000100001000, 0b1111000110111000, \
-			width6sub, aregidispsub, dreg119sub // write to register
+			null, width6sub, aregidispsub, dreg119sub // write to register
 		instruction movep_wm,  "movep",  0b0000000110001000, 0b1111000110111000, \
-			width6sub, dreg119sub, aregidispsub // write to memory
+			null, width6sub, dreg119sub, aregidispsub // write to memory
 
 		instruction movea_wrw, "movea",   0b0011000001000000, 0b1111000111000000, \
-			widthwordsub, moderightsub, areg119sub
+			null, widthwordsub, moderightsub, areg119sub
 		instruction movea_wrl, "movea",   0b0010000001000000, 0b1111000111000000, \
-			widthlongsub, moderightsub, areg119sub
+			null, widthlongsub, moderightsub, areg119sub
 
 		instruction move_wrb, "move",     0b0001000000000000, 0b1111000000000000, \
-			widthbytesub, moderightsub, modeleftsub
+			null, widthbytesub, moderightsub, modeleftsub
 		instruction move_wrw, "move",     0b0011000000000000, 0b1111000000000000, \
-			widthwordsub, moderightsub, modeleftsub
+			null, widthwordsub, moderightsub, modeleftsub
 		instruction move_wrl, "move",     0b0010000000000000, 0b1111000000000000, \
-			widthlongsub, moderightsub, modeleftsub
+			null, widthlongsub, moderightsub, modeleftsub
 
 		instruction btst_i, "btst",       0b0000100000000000, 0b1111111111000000, \
-			null, immbytesub, moderightsub
+			null, null, immbytesub, moderightsub
 		instruction btst_dr, "btst",      0b0000000100000000, 0b1111000111000000, \
-			null, dreg119sub, moderightsub
+			null, null, dreg119sub, moderightsub
 		instruction bchg_i, "bchg",       0b0000100001000000, 0b1111111111000000, \
-			null, immbytesub, moderightsub
+			null, null, immbytesub, moderightsub
 		instruction bchg_dr, "bchg",      0b0000000101000000, 0b1111000111000000, \
-			null, dreg119sub, moderightsub
+			null, null, dreg119sub, moderightsub
 		instruction bclr_i, "bclr",       0b0000100010000000, 0b1111111111000000, \
-			null, immbytesub, moderightsub
+			null, null, immbytesub, moderightsub
 		instruction bclr_dr, "bclr",      0b0000000110000000, 0b1111000111000000, \
-			null, dreg119sub, moderightsub
+			null, null, dreg119sub, moderightsub
 		instruction bset_i, "bset",       0b0000100011000000, 0b1111111111000000, \
-			null, immbytesub, moderightsub
+			null, null, immbytesub, moderightsub
 		instruction bset_dr, "bset",      0b0000000111000000, 0b1111000111000000, \
-			null, dreg119sub, moderightsub
+			null, null, dreg119sub, moderightsub
 
 		instruction move_from_sr, "move", 0b0100000011000000, 0b1111111111000000, \
-			widthwordsub, srsub, moderightsub
+			null, widthwordsub, srsub, moderightsub
 		instruction move_to_ccr, "move",  0b0100010011000000, 0b1111111111000000, \
-			widthwordsub, moderightsub, ccrsub
+			null, widthwordsub, moderightsub, ccrsub
 		instruction move_to_sr, "move",   0b0100011011000000, 0b1111111111000000, \
-			widthwordsub, moderightsub, srsub
+			null, widthwordsub, moderightsub, srsub
 
 		instruction negx_ea,   "negx",    0b0100000000000000, 0b1111111100000000, \
-			width76sub, null, moderightsub
+			null, width76sub, null, moderightsub
 		instruction clr_ea,   "clr",      0b0100001000000000, 0b1111111100000000, \
-			width76sub, null, moderightsub
+			null, width76sub, null, moderightsub
 		instruction neg_ea,   "neg",      0b0100010000000000, 0b1111111100000000, \
-			width76sub, null, moderightsub
+			null, width76sub, null, moderightsub
 		instruction not_ea,   "not",      0b0100011000000000, 0b1111111100000000, \
-			width76sub, null, moderightsub
+			null, width76sub, null, moderightsub
 
 		instruction ext_wl,    "ext",     0b0100100010000000, 0b1111111110111000, \
-			width6sub, null, dregsub
+			null, width6sub, null, dregsub
 		instruction nbcd_ea,   "nbcd",    0b0100100000000000, 0b1111111111000000, \
-			null, null, moderightsub
+			null, null, null, moderightsub
 		instruction swap_d,    "swap",    0b0100100001000000, 0b1111111111111000, \
-			null, null, dregsub
+			null, null, null, dregsub
 
 		instruction pea_ea,    "pea",     0b0100100001000000, 0b1111111111000000, \
-			null, null, moderightsub
+			null, null, null, moderightsub
 
 		instruction illegal,   "illegal", 0b0100101011111100, 0b1111111111111111, \
-			null, null, null
+			null, null, null, null
 
 		instruction tas_ea,    "tas",     0b0100101011000000, 0b1111111111000000, \
-			null, null, moderightsub
+			null, null, null, moderightsub
 		instruction tst_ea,    "tst",     0b0100101000000000, 0b1111111100000000, \
-			width76sub, null, moderightsub
+			null, width76sub, null, moderightsub
 
 		instruction trap,     "trap",     0b0100111001000000, 0b1111111111110000, \
-			null, null, data30sub
+			null, null, null, data30sub
 
 		instruction link,      "link",    0b0100111001010000, 0b1111111111111000, \
-			widthwordsub, aregsub, immwordsub
+			null, widthwordsub, aregsub, immwordsub
 		instruction unlk,      "unlk",    0b0100111001011000, 0b1111111111111000, \
-			null, null, aregsub
+			null, null, null, aregsub
 
 		instruction move_to_usp   "move", 0b0100111001100000, 0b1111111111111000, \
-			widthlongsub, aregsub, uspsub
+			null, widthlongsub, aregsub, uspsub
 		instruction move_from_usp "move", 0b0100111001101000, 0b1111111111111000, \
-			widthlongsub, uspsub, aregsub
+			null, widthlongsub, uspsub, aregsub
 
 		instruction reset,   "reset",     0b0100111001110000, 0b1111111111111111, \
-			null, null, null
+			null, null, null, null
 		instruction nop,   "nop",         0b0100111001110001, 0b1111111111111111, \
-			null, null, null
+			null, null, null, null
 		instruction stop,   "stop",       0b0100111001110010, 0b1111111111111111, \
-			null, null, immwordsub
+			null, null, null, immwordsub
 		instruction rte,   "rte",         0b0100111001110011, 0b1111111111111111, \
-			null, null, null
+			null, null, null, null
 		instruction rts,   "rts",         0b0100111001110101, 0b1111111111111111, \
-			null, null, null
+			null, null, null, null
 		instruction trapv,   "trapv",     0b0100111001110110, 0b1111111111111111, \
-			null, null, null
+			null, null, null, null
 		instruction rtr,   "rtr",         0b0100111001110111, 0b1111111111111111, \
-			null, null, null
+			null, null, null, null
 
 		instruction movem_wr,   "movem",  0b0100100010000000, 0b1111111110000000, \
-			width6sub, movemsub, moderightsub
+			null, width6sub, movemsub, moderightsub
 		instruction movem_wm,   "movem",  0b0100110010000000, 0b1111111110000000, \
-			width6sub, moderightsub, movemsub
+			null, width6sub, moderightsub, movemsub
 
 		instruction lea, "lea",           0b0100000111000000, 0b1111000111000000, \
-			widthwordsub, moderightsub, areg119sub
+			null, widthwordsub, moderightsub, areg119sub
 
 		instruction chk, "chk",           0b0100000110000000, 0b1111000111000000, \
-			widthwordsub, moderightsub, dreg119sub
+			null, widthwordsub, moderightsub, dreg119sub
 
 		instruction dbcc "db",            0b0101000011001000, 0b1111000011111000, \
-			condsub, dregsub, immwordsub
+			condsub, null, dregsub, immwordsub
 		instruction scc "s",              0b0101000011000000, 0b1111000011000000, \
-			condsub, null, moderightsub
+			condsub, null, null, moderightsub
+		instruction bra "bra",            0b0110000000000000, 0b1111111100000000, \
+			null, widthdispsub, null, dispsub
+		instruction bsr "bsr",            0b0110000100000000, 0b1111111100000000, \
+			null, widthdispsub, null, dispsub
+		instruction bcc "b",              0b0110000000000000, 0b1111000000000000, \
+			condsub, widthdispsub, null, dispsub
 
 		instruction addq "addq",          0b0101000000000000, 0b1111000100000000, \
-			width76sub, data119sub, moderightsub
+			null, width76sub, data119sub, moderightsub
 		instruction subq "subq",          0b0101000100000000, 0b1111000100000000, \
-			width76sub, data119sub, moderightsub
+			null, width76sub, data119sub, moderightsub
 
 		| end of table
 		.long 0
 
-nullwidth:	.asciz ""
-bytewidth:	.asciz ".b"
-wordwidth:	.asciz ".w"
-longwidth:	.asciz ".l"
+nullwidthstr:	.asciz ""
+bytewidthstr:	.asciz ".b"
+wordwidthstr:	.asciz ".w"
+longwidthstr:	.asciz ".l"
 
-twobwidthtable:	.long bytewidth
-onebwidthtable:	.long wordwidth
-		.long longwidth
+twobwidthtable:	.long bytewidthstr
+onebwidthtable:	.long wordwidthstr
+		.long longwidthstr
 
 hex:		.asciz "0x"
 

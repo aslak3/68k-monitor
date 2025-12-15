@@ -29,6 +29,8 @@
 		.equ STR_A6, (1 << 22)
 		.equ STR_A7, (1 << 23)
 
+		.equ null, 0
+
 		.equ SECTION_MONITOR, (1 << 0)
 		.equ SECTION_DISASSEMBLER, (1 << 1)
 
