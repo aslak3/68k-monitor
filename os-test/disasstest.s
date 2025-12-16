@@ -86,5 +86,9 @@ smallhop:	chk.w (0x12345678),%d2
 		beq.b smallhop
 		bpl.w disasstest
 		moveq.l #0x2a,%d2
-
+		divu.w (0x12345678),%d1
+		divs.w %d2,%d3
+		move.b -(%a1),-(%a2)
+		sbcd %d1,%d2
+		sbcd -(%a0),-(%a6)
 		rts

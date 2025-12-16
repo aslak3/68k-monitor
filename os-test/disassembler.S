@@ -245,7 +245,7 @@ movemsub:	movem.l %d1-%d5/%a0,-(%sp)
 		movem.l (%sp)+,%d1-%d5/%a0
 		rts
 
-dreg119sub:	movem.l %d2/%a0,-(%sp)
+datareg119sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
 		and.w #0x7,%d2			| mask to 3 bits
@@ -254,7 +254,7 @@ dreg119sub:	movem.l %d2/%a0,-(%sp)
 		movem.l (%sp)+,%d2/%a0
 		rts
 
-areg119sub:	movem.l %d2/%a0,-(%sp)
+addrreg119sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
 		and.w #0x7,%d2			| mask to 3 bits
@@ -294,22 +294,38 @@ immbwlsub:	movem.l %d2/%a0,-(%sp)
 100:		movem.l (%sp)+,%d2/%a0
 		rts
 
+extrightsub:	movem.l %d2-%d3/%a0,-(%sp)
+		move.w %d2,%d3			| copy original instruction word
+		and.w #0x7,%d2			| d2 holds register only
+		btst #3,%d3			| see if data or -address
+		beq 1f				| treat as data mode
+		bra 5f				| treat as predecrement adddress mode
+
+extleftsub:	movem.l %d2-%d3/%a0,-(%sp)
+		move.w %d2,%d3			| copy original instruction word
+		lsr.w #8,%d2			| d2 holds register only
+		lsr.w #1,%d2			| needs one more shift
+		and.w #0x7,%d2			| d2 holds register only
+		btst #3,%d3			| see if data or -address
+		beq 1f				| treat as data mode
+		bra 5f				| treat as predecrement adddress mode
+
 moderightsub:	movem.l %d2-%d3/%a0,-(%sp)
-		move.l %d2,%d3			| copy original instruction word
+		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
 		lsr.w #3,%d3			| d3 holds mode only, get bits 5-3
 		and.w #0x7,%d3			| mask to 3 bits
-		bra 1f
+		bra 0f
 
 modeleftsub:	movem.l %d2-%d3/%a0,-(%sp)
-		move.l %d2,%d3			| copy original instruction word
+		move.w %d2,%d3			| copy original instruction word
 		lsr.w #8,%d2			| d2 holds register only
 		lsr.w #1,%d2			| needs one more shift
 		and.w #0x7,%d2			| d2 holds register only
 		lsr.w #6,%d3			| d3 holds mode only, get bits 8-6
 		and.w #0x7,%d3			| mask to 3 bits
 
-1:		cmp.w #0b000,%d3		| data register
+0:		cmp.w #0b000,%d3		| data register
 		beq 1f				| yes, data register
 		cmp.w #0b001,%d3		| address register
 		beq 2f				| yes, address register
@@ -330,36 +346,36 @@ bad:		movea.l #badinstmsg,%a0		| bad width
 		bsr serputstr			| output bad instruction message
 		bra 100f
 
-dregsub:	movem.l %d2-%d3/%a0,-(%sp)
+dataregsub:	movem.l %d2-%d3/%a0,-(%sp)
 1:		move.b %d2,%d0			| get original instruction word
 		bsr serputdatareg		| output '%d'
 		bra 100f
 
-aregsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregsub:	movem.l %d2-%d3/%a0,-(%sp)
 2:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrreg		| output '%a'
 		bra 100f
 
-aregisub:	movem.l %d2-%d3/%a0,-(%sp)
+addregisub:	movem.l %d2-%d3/%a0,-(%sp)
 3:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
-aregiincsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregiincsub:	movem.l %d2-%d3/%a0,-(%sp)
 4:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		move.b #'+',%d0			| add '+' after ea
 		bsr serputchar			| output '+'
 		bra 100f
 
-aregidecsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregidecsub:	movem.l %d2-%d3/%a0,-(%sp)
 5:		move.b #'-',%d0			| add '-' before ea
 		bsr serputchar			| output '-'
 		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
-aregidispsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregidispsub:movem.l %d2-%d3/%a0,-(%sp)
 6:		move.b #'(',%d0			| add '(' before ea
 		bsr serputchar			| output '('
 		move.w (%a4)+,%d0		| get the displacement
@@ -372,7 +388,7 @@ aregidispsub:	movem.l %d2-%d3/%a0,-(%sp)
 		bsr serputchar			| output ')'
 		bra 100f
 
-aregiindexsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregiidxsub:	movem.l %d2-%d3/%a0,-(%sp)
 7:		move.b #'(',%d0			| add '(' before extension word
 		bsr serputchar			| output '(')'
 		move.w (%a4)+,%d4		| get the extension word
@@ -551,14 +567,14 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		| movep instructions must be before memory btst instructions to avoid
 		| false matches
 		instruction movep_wr,  "movep",  0b0000000100001000, 0b1111000110111000, \
-			null, width6sub, aregidispsub, dreg119sub // write to register
+			null, width6sub, addrregidispsub, datareg119sub // write to register
 		instruction movep_wm,  "movep",  0b0000000110001000, 0b1111000110111000, \
-			null, width6sub, dreg119sub, aregidispsub // write to memory
+			null, width6sub, datareg119sub, addrregidispsub // write to memory
 
 		instruction movea_wrw, "movea",   0b0011000001000000, 0b1111000111000000, \
-			null, widthwordsub, moderightsub, areg119sub
+			null, widthwordsub, moderightsub, addrreg119sub
 		instruction movea_wrl, "movea",   0b0010000001000000, 0b1111000111000000, \
-			null, widthlongsub, moderightsub, areg119sub
+			null, widthlongsub, moderightsub, addrreg119sub
 
 		instruction move_wrb, "move",     0b0001000000000000, 0b1111000000000000, \
 			null, widthbytesub, moderightsub, modeleftsub
@@ -570,19 +586,19 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction btst_i, "btst",       0b0000100000000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
 		instruction btst_dr, "btst",      0b0000000100000000, 0b1111000111000000, \
-			null, null, dreg119sub, moderightsub
+			null, null, datareg119sub, moderightsub
 		instruction bchg_i, "bchg",       0b0000100001000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
 		instruction bchg_dr, "bchg",      0b0000000101000000, 0b1111000111000000, \
-			null, null, dreg119sub, moderightsub
+			null, null, datareg119sub, moderightsub
 		instruction bclr_i, "bclr",       0b0000100010000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
 		instruction bclr_dr, "bclr",      0b0000000110000000, 0b1111000111000000, \
-			null, null, dreg119sub, moderightsub
+			null, null, datareg119sub, moderightsub
 		instruction bset_i, "bset",       0b0000100011000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
 		instruction bset_dr, "bset",      0b0000000111000000, 0b1111000111000000, \
-			null, null, dreg119sub, moderightsub
+			null, null, datareg119sub, moderightsub
 
 		instruction move_from_sr, "move", 0b0100000011000000, 0b1111111111000000, \
 			null, widthwordsub, srsub, moderightsub
@@ -601,11 +617,11 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, width76sub, null, moderightsub
 
 		instruction ext_wl,    "ext",     0b0100100010000000, 0b1111111110111000, \
-			null, width6sub, null, dregsub
+			null, width6sub, null, dataregsub
 		instruction nbcd_ea,   "nbcd",    0b0100100000000000, 0b1111111111000000, \
 			null, null, null, moderightsub
 		instruction swap_d,    "swap",    0b0100100001000000, 0b1111111111111000, \
-			null, null, null, dregsub
+			null, null, null, dataregsub
 
 		instruction pea_ea,    "pea",     0b0100100001000000, 0b1111111111000000, \
 			null, null, null, moderightsub
@@ -622,14 +638,14 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, null, null, data30sub
 
 		instruction link,      "link",    0b0100111001010000, 0b1111111111111000, \
-			null, widthwordsub, aregsub, immwordsub
+			null, widthwordsub, addrregsub, immwordsub
 		instruction unlk,      "unlk",    0b0100111001011000, 0b1111111111111000, \
-			null, null, null, aregsub
+			null, null, null, addrregsub
 
 		instruction move_to_usp   "move", 0b0100111001100000, 0b1111111111111000, \
-			null, widthlongsub, aregsub, uspsub
+			null, widthlongsub, addrregsub, uspsub
 		instruction move_from_usp "move", 0b0100111001101000, 0b1111111111111000, \
-			null, widthlongsub, uspsub, aregsub
+			null, widthlongsub, uspsub, addrregsub
 
 		instruction reset,   "reset",     0b0100111001110000, 0b1111111111111111, \
 			null, null, null, null
@@ -652,13 +668,13 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, width6sub, moderightsub, movemsub
 
 		instruction lea, "lea",           0b0100000111000000, 0b1111000111000000, \
-			null, widthwordsub, moderightsub, areg119sub
+			null, widthwordsub, moderightsub, addrreg119sub
 
 		instruction chk, "chk",           0b0100000110000000, 0b1111000111000000, \
-			null, widthwordsub, moderightsub, dreg119sub
+			null, widthwordsub, moderightsub, datareg119sub
 
 		instruction dbcc "db",            0b0101000011001000, 0b1111000011111000, \
-			condsub, null, dregsub, immwordsub
+			condsub, null, dataregsub, immwordsub
 		instruction scc "s",              0b0101000011000000, 0b1111000011000000, \
 			condsub, null, null, moderightsub
 		instruction bra "bra",            0b0110000000000000, 0b1111111100000000, \
@@ -669,15 +685,23 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			condsub, widthdispsub, null, dispsub
 
 		instruction moveq "moveq",         0b0111000000000000, 0b1111000100000000, \
-			null, widthlongsub, data70sub, dreg119sub
+			null, widthlongsub, data70sub, datareg119sub
+
+		instruction divu "divu",          0b1000000011000000, 0b1111000111000000, \
+			null, widthwordsub, moderightsub, datareg119sub
+		instruction divs "divs",          0b1000000111000000, 0b1111000111000000, \
+			null, widthwordsub, moderightsub, datareg119sub
+
+		instruction sbcd "sbcd",          0b1000000100000000, 0b1111000111110000, \
+			null, null, extrightsub, extleftsub
 
 		instruction addq "addq",          0b0101000000000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
 		instruction subq "subq",          0b0101000100000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
 
-		| end of table
-		.long 0
+
+		.long 0				| end of table
 
 nullwidthstr:	.asciz ""
 bytewidthstr:	.asciz ".b"
@@ -697,7 +721,7 @@ dataregstr:	.asciz "%d"
 addrregstr:	.asciz "%a"
 
 allregstr:
-alldregstr:
+alldataregstr:
 d0regstr:	.asciz "%d0"
 d1regstr:	.asciz "%d1"
 d2regstr:	.asciz "%d2"
