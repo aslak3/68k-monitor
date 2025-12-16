@@ -85,5 +85,6 @@ smallhop:	chk.w (0x12345678),%d2
 		bsr.w disasstest
 		beq.b smallhop
 		bpl.w disasstest
+		moveq.l #0x2a,%d2
 
 		rts

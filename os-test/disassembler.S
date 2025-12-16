@@ -181,6 +181,14 @@ data119sub:	movem.l %d2/%a0,-(%sp)
 		movem.l (%sp)+,%d2/%a0
 		rts
 
+data70sub:	movem.l %d2/%a0,-(%sp)
+		move.b #'#',%d0			| output '#'
+		bsr serputchar			| output it
+		move.b %d2,%d0			| copy original instruction word
+		bsr hexbyte			| output the byte
+		movem.l (%sp)+,%d2/%a0
+		rts
+
 immbytesub:	movem.l %d0/%a0,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -659,6 +667,9 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, widthdispsub, null, dispsub
 		instruction bcc "b",              0b0110000000000000, 0b1111000000000000, \
 			condsub, widthdispsub, null, dispsub
+
+		instruction moveq "moveq",         0b0111000000000000, 0b1111000100000000, \
+			null, widthlongsub, data70sub, dreg119sub
 
 		instruction addq "addq",          0b0101000000000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
