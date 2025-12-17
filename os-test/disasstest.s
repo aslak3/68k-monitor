@@ -91,4 +91,17 @@ smallhop:	chk.w (0x12345678),%d2
 		move.b -(%a1),-(%a2)
 		sbcd %d1,%d2
 		sbcd -(%a0),-(%a6)
+		abcd %d1,%d2
+		abcd -(%a0),-(%a6)
+		or.w (%a2),%d5
+		or.l %d2,(0x12345678)
+		or.b %d0,%d1
+		sub.l %d7,(0x12,%a5,%d2.w)
+		subx.w %d2,%d3
+		subx.l -(%a2),-(%a6)
+		addx.w %d2,%d3
+		addx.l -(%a2),-(%a6)
+		adda.w %d2,%a5
+		suba.l (0x12,%a5,%d2.w),%a2
+
 		rts

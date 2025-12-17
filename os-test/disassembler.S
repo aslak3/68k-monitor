@@ -131,6 +131,16 @@ width6sub:	movem.l %d2/%a0,-(%sp)
 		movem.l (%sp)+,%d2/%a0
 		rts
 
+width8sub:	movem.l %d2/%a0,-(%sp)
+		lsr.w #8,%d2			| get bit 6
+		and.w #0x1,%d2			| mask to 1 bit
+		move.l (%d2.w*4,onebwidthtable),%a0
+			 			| get width string
+		bsr serputstr
+		movem.l (%sp)+,%d2/%a0
+		rts
+
+
 widthdispsub:	movem.l %a0,-(%sp)
 		tst.b %d2			| look at displacement
 		beq 1f				| 0 means word
@@ -669,6 +679,10 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 
 		instruction lea, "lea",           0b0100000111000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, addrreg119sub
+		instruction suba, "suba",         0b1001000011000000, 0b1111000011000000, \
+			null, width8sub, moderightsub, addrreg119sub
+		instruction adda, "adda",         0b1101000011000000, 0b1111000011000000, \
+			null, width8sub, moderightsub, addrreg119sub
 
 		instruction chk, "chk",           0b0100000110000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, datareg119sub
@@ -694,11 +708,28 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 
 		instruction sbcd "sbcd",          0b1000000100000000, 0b1111000111110000, \
 			null, null, extrightsub, extleftsub
+		instruction abcd "abcd",          0b1100000100000000, 0b1111000111110000, \
+			null, null, extrightsub, extleftsub
+
+		instruction subx "subx",          0b1001000100000000, 0b1111000100110000, \
+			null, width76sub, extrightsub, extleftsub
+		instruction addx "addx",          0b1101000100000000, 0b1111000100110000, \
+			null, width76sub, extrightsub, extleftsub
 
 		instruction addq "addq",          0b0101000000000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
 		instruction subq "subq",          0b0101000100000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
+
+		instruction or_wr  "or",          0b1000000000000000, 0b1111000100000000, \
+			null, width76sub, moderightsub, datareg119sub
+		instruction or_wea "or",          0b1000000100000000, 0b1111000100000000, \
+			null, width76sub,  datareg119sub, moderightsub
+		instruction sub_wr  "sub",        0b1001000000000000, 0b1111000100000000, \
+			null, width76sub, moderightsub, datareg119sub
+		instruction sub_wea "sub",        0b1001000100000000, 0b1111000100000000, \
+			null, width76sub,  datareg119sub, moderightsub
+
 
 
 		.long 0				| end of table
