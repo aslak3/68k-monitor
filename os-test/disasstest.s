@@ -96,12 +96,22 @@ smallhop:	chk.w (0x12345678),%d2
 		or.w (%a2),%d5
 		or.l %d2,(0x12345678)
 		or.b %d0,%d1
+		and.w (%a2),%d5
+		and.l %d2,(0x12345678)
+		and.b %d0,%d1
+		eor.l %d2,(0x12345678)
+		eor.b %d0,%d1
 		sub.l %d7,(0x12,%a5,%d2.w)
+		add.w %d5,(0x12345678)
 		subx.w %d2,%d3
 		subx.l -(%a2),-(%a6)
 		addx.w %d2,%d3
 		addx.l -(%a2),-(%a6)
 		adda.w %d2,%a5
 		suba.l (0x12,%a5,%d2.w),%a2
+		cmpa.w (0x12,%a5,%d2.w),%a2
+		cmpm.w (%a1)+,(%a2)+
+		cmp.b (0x12345678),%d3
+		cmp.w %d0,%d1
 
 		rts

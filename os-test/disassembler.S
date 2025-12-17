@@ -304,6 +304,18 @@ immbwlsub:	movem.l %d2/%a0,-(%sp)
 100:		movem.l (%sp)+,%d2/%a0
 		rts
 
+memrightsub:	movem.l %d2-%d3/%a0,-(%sp)
+		move.w %d2,%d3			| copy original instruction word
+		and.w #0x7,%d2			| d2 holds register only
+		bra 4f				| treat as postincrement address mode
+
+memleftsub:	movem.l %d2-%d3/%a0,-(%sp)
+		move.w %d2,%d3			| copy original instruction word
+		lsr.w #8,%d2			| d2 holds register only
+		lsr.w #1,%d2			| needs one more shift
+		and.w #0x7,%d2			| d2 holds register only
+		bra 4f				| treat as postincrement address mode
+
 extrightsub:	movem.l %d2-%d3/%a0,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
@@ -681,6 +693,8 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, widthwordsub, moderightsub, addrreg119sub
 		instruction suba, "suba",         0b1001000011000000, 0b1111000011000000, \
 			null, width8sub, moderightsub, addrreg119sub
+		instruction cmpa, "cmpa",         0b1011000011000000, 0b1111000011000000, \
+			null, width8sub, moderightsub, addrreg119sub
 		instruction adda, "adda",         0b1101000011000000, 0b1111000011000000, \
 			null, width8sub, moderightsub, addrreg119sub
 
@@ -725,11 +739,25 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, width76sub, moderightsub, datareg119sub
 		instruction or_wea "or",          0b1000000100000000, 0b1111000100000000, \
 			null, width76sub,  datareg119sub, moderightsub
+		instruction and_wr  "and",          0b1100000000000000, 0b1111000100000000, \
+			null, width76sub, moderightsub, datareg119sub
+		instruction and_wea "and",          0b1100000100000000, 0b1111000100000000, \
+			null, width76sub,  datareg119sub, moderightsub
+
 		instruction sub_wr  "sub",        0b1001000000000000, 0b1111000100000000, \
 			null, width76sub, moderightsub, datareg119sub
 		instruction sub_wea "sub",        0b1001000100000000, 0b1111000100000000, \
 			null, width76sub,  datareg119sub, moderightsub
-
+		instruction add_wr  "add",        0b1101000000000000, 0b1111000100000000, \
+			null, width76sub, moderightsub, datareg119sub
+		instruction add_wea "add",        0b1101000100000000, 0b1111000100000000, \
+			null, width76sub,  datareg119sub, moderightsub
+		instruction cmpm, "cmpm",         0b1011000100001000, 0b1111000100111000, \
+			null, width76sub, memrightsub, memleftsub
+		instruction cmp, "cmp",           0b1011000000000000, 0b1111000100000000, \
+			null, width76sub, moderightsub, datareg119sub
+		instruction eor "eor",            0b1011000100000000, 0b1111000100000000, \
+			null, width76sub, datareg119sub, moderightsub
 
 
 		.long 0				| end of table
