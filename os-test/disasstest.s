@@ -128,17 +128,13 @@ smallhop:	chk.w (0x12345678),%d2
 		lsr.w (%a0)+
 		roxl.w (0x12,%a2)
 		ror.w (0x12,%a2,%d0.l)
-
 		asl.b #8,%d1
 		lsr.w #4,%d2
 		roxl.l #1,%d3
 		ror.w #3,%d7
-
 		asl.b %d7,%d1
 		lsr.w %d4,%d2
 		roxl.l %d1,%d3
 		ror.w %d3,%d7
-
-
 
 		rts

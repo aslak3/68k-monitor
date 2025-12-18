@@ -19,7 +19,6 @@
 		.equ INST_DSTSUB, 20
 		.equ INST_LENGTH, 24
 
-
 | disassemble the code from the given address at a0 for the given length in words at d0
 
 disassemble:	move.l %a0,%a4			| copy address to a4 for processing
@@ -116,8 +115,7 @@ widthlongsub:	movem.l %a0,-(%sp)
 width76sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #4,%d2			| get bits 7-6
 		and.w #0xc,%d2			| mask to 2 bits
-		move.l (%d2.w,twobwidthtable),%a0
-			 			| get width string
+		lea (%d2.w,bytewidthstr),%a0	| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
@@ -125,8 +123,7 @@ width76sub:	movem.l %d2/%a0,-(%sp)
 width6sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #4,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
-		move.l (%d2.w,onebwidthtable),%a0
-			 			| get width string
+		lea (%d2.w,wordwidthstr),%a0	| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
@@ -134,8 +131,7 @@ width6sub:	movem.l %d2/%a0,-(%sp)
 width8sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #6,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
-		move.l (%d2.w,onebwidthtable),%a0
-			 			| get width string
+		lea (%d2.w,wordwidthstr),%a0	| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
@@ -564,261 +560,255 @@ uspsub:		movem.l %a0,-(%sp)
 		.section .rodata
 		.align 2
 
-instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b1111111111111111, \
+instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111111111, \
 			null, widthbytesub, immbytesub, ccrsub
-		instruction ori_sr,   "ori",	0b0000000001111100, 0b1111111111111111, \
+		instruction ori_sr,    "ori",	    0b0000000001111100, 0b1111111111111111, \
 			null, widthwordsub, immwordsub, srsub
-		instruction ori_ea,   "ori",    0b0000000000000000, 0b1111111100000000, \
+		instruction ori_ea,    "ori",       0b0000000000000000, 0b1111111100000000, \
 			null, width76sub, immbwlsub, moderightsub
 
-		instruction andi_ccr, "andi",   0b0000001000111100, 0b1111111111111111, \
+		instruction andi_ccr,  "andi",      0b0000001000111100, 0b1111111111111111, \
 			null, widthbytesub, immbytesub, ccrsub
-		instruction andi_sr,  "andi",   0b0000001001111100, 0b1111111111111111, \
+		instruction andi_sr,   "andi",      0b0000001001111100, 0b1111111111111111, \
 			null, widthwordsub, immwordsub, srsub
-		instruction andi_ea,  "andi"    0b0000001000000000, 0b1111111100000000, \
+		instruction andi_ea,   "andi"       0b0000001000000000, 0b1111111100000000, \
 			null, width76sub, immbwlsub, moderightsub
 
-		instruction subi_ea,  "subi",   0b0000010000000000, 0b1111111100000000, \
+		instruction subi_ea,   "subi",      0b0000010000000000, 0b1111111100000000, \
 			null, width76sub, immbwlsub, moderightsub
-		instruction addi_ea,  "addi",   0b0000011000000000, 0b1111111100000000, \
+		instruction addi_ea,   "addi",      0b0000011000000000, 0b1111111100000000, \
 			null, width76sub, immbwlsub, moderightsub
 
-		instruction eori_ccr, "eori",   0b0000101000111100, 0b1111111111111111, \
+		instruction eori_ccr,  "eori",      0b0000101000111100, 0b1111111111111111, \
 			null, widthbytesub, immbytesub, ccrsub
-		instruction eori_sr,  "eori",   0b0000101001111100, 0b1111111111111111, \
+		instruction eori_sr,   "eori",      0b0000101001111100, 0b1111111111111111, \
 			null, widthwordsub, immwordsub, srsub
-		instruction eori_ea,  "eori",   0b0000101000000000, 0b1111111100000000, \
+		instruction eori_ea,   "eori",      0b0000101000000000, 0b1111111100000000, \
 			null, width76sub, immbwlsub, moderightsub
 
-		instruction cmpi_ea,  "cmpi",   0b0000110000000000, 0b1111111100000000, \
+		instruction cmpi_ea,   "cmpi",      0b0000110000000000, 0b1111111100000000, \
 			null, width76sub, immbwlsub, moderightsub
 
-		| movep instructions must be before memory btst instructions to avoid
-		| false matches
-		instruction movep_wr,  "movep",  0b0000000100001000, 0b1111000110111000, \
+		instruction movep_wr,  "movep",     0b0000000100001000, 0b1111000110111000, \
 			null, width6sub, addrregidispsub, datareg119sub // write to register
-		instruction movep_wm,  "movep",  0b0000000110001000, 0b1111000110111000, \
+		instruction movep_wm,  "movep",     0b0000000110001000, 0b1111000110111000, \
 			null, width6sub, datareg119sub, addrregidispsub // write to memory
 
-		instruction movea_wrw, "movea",   0b0011000001000000, 0b1111000111000000, \
+		instruction movea_wrw, "movea",     0b0011000001000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, addrreg119sub
-		instruction movea_wrl, "movea",   0b0010000001000000, 0b1111000111000000, \
+		instruction movea_wrl, "movea",     0b0010000001000000, 0b1111000111000000, \
 			null, widthlongsub, moderightsub, addrreg119sub
 
-		instruction move_wrb, "move",     0b0001000000000000, 0b1111000000000000, \
+		instruction move_wrb,  "move",      0b0001000000000000, 0b1111000000000000, \
 			null, widthbytesub, moderightsub, modeleftsub
-		instruction move_wrw, "move",     0b0011000000000000, 0b1111000000000000, \
+		instruction move_wrw,  "move",      0b0011000000000000, 0b1111000000000000, \
 			null, widthwordsub, moderightsub, modeleftsub
-		instruction move_wrl, "move",     0b0010000000000000, 0b1111000000000000, \
+		instruction move_wrl,  "move",      0b0010000000000000, 0b1111000000000000, \
 			null, widthlongsub, moderightsub, modeleftsub
 
-		instruction btst_i, "btst",       0b0000100000000000, 0b1111111111000000, \
+		instruction btst_i,    "btst",      0b0000100000000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
-		instruction btst_dr, "btst",      0b0000000100000000, 0b1111000111000000, \
+		instruction btst_dr,   "btst",      0b0000000100000000, 0b1111000111000000, \
 			null, null, datareg119sub, moderightsub
-		instruction bchg_i, "bchg",       0b0000100001000000, 0b1111111111000000, \
+		instruction bchg_i,    "bchg",      0b0000100001000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
-		instruction bchg_dr, "bchg",      0b0000000101000000, 0b1111000111000000, \
+		instruction bchg_dr,   "bchg",      0b0000000101000000, 0b1111000111000000, \
 			null, null, datareg119sub, moderightsub
-		instruction bclr_i, "bclr",       0b0000100010000000, 0b1111111111000000, \
+		instruction bclr_i,    "bclr",      0b0000100010000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
-		instruction bclr_dr, "bclr",      0b0000000110000000, 0b1111000111000000, \
+		instruction bclr_dr,   "bclr",      0b0000000110000000, 0b1111000111000000, \
 			null, null, datareg119sub, moderightsub
-		instruction bset_i, "bset",       0b0000100011000000, 0b1111111111000000, \
+		instruction bset_i,    "bset",      0b0000100011000000, 0b1111111111000000, \
 			null, null, immbytesub, moderightsub
-		instruction bset_dr, "bset",      0b0000000111000000, 0b1111000111000000, \
+		instruction bset_dr,   "bset",      0b0000000111000000, 0b1111000111000000, \
 			null, null, datareg119sub, moderightsub
 
-		instruction move_from_sr, "move", 0b0100000011000000, 0b1111111111000000, \
+		instruction mv_fr_sr,  "move",      0b0100000011000000, 0b1111111111000000, \
 			null, widthwordsub, srsub, moderightsub
-		instruction move_to_ccr, "move",  0b0100010011000000, 0b1111111111000000, \
+		instruction mv_to_ccr, "move",      0b0100010011000000, 0b1111111111000000, \
 			null, widthwordsub, moderightsub, ccrsub
-		instruction move_to_sr, "move",   0b0100011011000000, 0b1111111111000000, \
+		instruction mv_to_sr,  "move",      0b0100011011000000, 0b1111111111000000, \
 			null, widthwordsub, moderightsub, srsub
 
-		instruction negx_ea,   "negx",    0b0100000000000000, 0b1111111100000000, \
+		instruction negx_ea,   "negx",      0b0100000000000000, 0b1111111100000000, \
 			null, width76sub, null, moderightsub
-		instruction clr_ea,   "clr",      0b0100001000000000, 0b1111111100000000, \
+		instruction clr_ea,    "clr",       0b0100001000000000, 0b1111111100000000, \
 			null, width76sub, null, moderightsub
-		instruction neg_ea,   "neg",      0b0100010000000000, 0b1111111100000000, \
+		instruction neg_ea,    "neg",       0b0100010000000000, 0b1111111100000000, \
 			null, width76sub, null, moderightsub
-		instruction not_ea,   "not",      0b0100011000000000, 0b1111111100000000, \
+		instruction not_ea,    "not",       0b0100011000000000, 0b1111111100000000, \
 			null, width76sub, null, moderightsub
 
-		instruction ext_wl,    "ext",     0b0100100010000000, 0b1111111110111000, \
+		instruction ext_wl,    "ext",       0b0100100010000000, 0b1111111110111000, \
 			null, width6sub, null, dataregsub
-		instruction nbcd_ea,   "nbcd",    0b0100100000000000, 0b1111111111000000, \
+		instruction nbcd_ea,   "nbcd",      0b0100100000000000, 0b1111111111000000, \
 			null, null, null, moderightsub
-		instruction swap_d,    "swap",    0b0100100001000000, 0b1111111111111000, \
+		instruction swap_d,    "swap",      0b0100100001000000, 0b1111111111111000, \
 			null, null, null, dataregsub
 
-		instruction pea_ea,    "pea",     0b0100100001000000, 0b1111111111000000, \
+		instruction pea_ea,    "pea",       0b0100100001000000, 0b1111111111000000, \
 			null, null, null, moderightsub
 
-		instruction illegal,   "illegal", 0b0100101011111100, 0b1111111111111111, \
+		instruction illegal,   "illegal",   0b0100101011111100, 0b1111111111111111, \
 			null, null, null, null
 
-		instruction tas_ea,    "tas",     0b0100101011000000, 0b1111111111000000, \
+		instruction tas_ea,    "tas",       0b0100101011000000, 0b1111111111000000, \
 			null, null, null, moderightsub
-		instruction tst_ea,    "tst",     0b0100101000000000, 0b1111111100000000, \
+		instruction tst_ea,    "tst",       0b0100101000000000, 0b1111111100000000, \
 			null, width76sub, null, moderightsub
 
-		instruction trap,     "trap",     0b0100111001000000, 0b1111111111110000, \
+		instruction trap,      "trap",      0b0100111001000000, 0b1111111111110000, \
 			null, null, null, data30sub
 
-		instruction link,      "link",    0b0100111001010000, 0b1111111111111000, \
+		instruction link,      "link",      0b0100111001010000, 0b1111111111111000, \
 			null, widthwordsub, addrregsub, immwordsub
-		instruction unlk,      "unlk",    0b0100111001011000, 0b1111111111111000, \
+		instruction unlk,      "unlk",      0b0100111001011000, 0b1111111111111000, \
 			null, null, null, addrregsub
 
-		instruction move_to_usp   "move", 0b0100111001100000, 0b1111111111111000, \
+		instruction mv_to_usp, "move",      0b0100111001100000, 0b1111111111111000, \
 			null, widthlongsub, addrregsub, uspsub
-		instruction move_from_usp "move", 0b0100111001101000, 0b1111111111111000, \
+		instruction mv_fr_usp, "move",      0b0100111001101000, 0b1111111111111000, \
 			null, widthlongsub, uspsub, addrregsub
 
-		instruction reset,   "reset",     0b0100111001110000, 0b1111111111111111, \
+		instruction reset,     "reset",     0b0100111001110000, 0b1111111111111111, \
 			null, null, null, null
-		instruction nop,   "nop",         0b0100111001110001, 0b1111111111111111, \
+		instruction nop,       "nop",       0b0100111001110001, 0b1111111111111111, \
 			null, null, null, null
-		instruction stop,   "stop",       0b0100111001110010, 0b1111111111111111, \
+		instruction stop,      "stop",      0b0100111001110010, 0b1111111111111111, \
 			null, null, null, immwordsub
-		instruction rte,   "rte",         0b0100111001110011, 0b1111111111111111, \
+		instruction rte,       "rte",       0b0100111001110011, 0b1111111111111111, \
 			null, null, null, null
-		instruction rts,   "rts",         0b0100111001110101, 0b1111111111111111, \
+		instruction rts,       "rts",       0b0100111001110101, 0b1111111111111111, \
 			null, null, null, null
-		instruction trapv,   "trapv",     0b0100111001110110, 0b1111111111111111, \
+		instruction trapv,     "trapv",     0b0100111001110110, 0b1111111111111111, \
 			null, null, null, null
-		instruction rtr,   "rtr",         0b0100111001110111, 0b1111111111111111, \
+		instruction rtr,       "rtr",       0b0100111001110111, 0b1111111111111111, \
 			null, null, null, null
 
-		instruction jsr,   "jsr",         0b0100111010000000, 0b1111111111000000, \
+		instruction jsr,       "jsr",       0b0100111010000000, 0b1111111111000000, \
 			null, null, null, moderightsub
-		instruction jmp,   "jmp",         0b0100111011000000, 0b1111111111000000, \
+		instruction jmp,       "jmp",       0b0100111011000000, 0b1111111111000000, \
 			null, null, null, moderightsub
 
-		instruction movem_wr,   "movem",  0b0100100010000000, 0b1111111110000000, \
+		instruction movem_wr,  "movem",     0b0100100010000000, 0b1111111110000000, \
 			null, width6sub, movemsub, moderightsub
-		instruction movem_wm,   "movem",  0b0100110010000000, 0b1111111110000000, \
+		instruction movem_wm,  "movem",     0b0100110010000000, 0b1111111110000000, \
 			null, width6sub, moderightsub, movemsub
 
-		instruction lea, "lea",           0b0100000111000000, 0b1111000111000000, \
+		instruction lea,       "lea",       0b0100000111000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, addrreg119sub
-		instruction suba, "suba",         0b1001000011000000, 0b1111000011000000, \
+		instruction suba,      "suba",      0b1001000011000000, 0b1111000011000000, \
 			null, width8sub, moderightsub, addrreg119sub
-		instruction cmpa, "cmpa",         0b1011000011000000, 0b1111000011000000, \
+		instruction cmpa,      "cmpa",      0b1011000011000000, 0b1111000011000000, \
 			null, width8sub, moderightsub, addrreg119sub
-		instruction adda, "adda",         0b1101000011000000, 0b1111000011000000, \
+		instruction adda,      "adda",      0b1101000011000000, 0b1111000011000000, \
 			null, width8sub, moderightsub, addrreg119sub
 
-		instruction chk, "chk",           0b0100000110000000, 0b1111000111000000, \
+		instruction chk,       "chk",       0b0100000110000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, datareg119sub
 
-		instruction dbcc "db",            0b0101000011001000, 0b1111000011111000, \
+		instruction dbcc,      "db",        0b0101000011001000, 0b1111000011111000, \
 			condsub, null, dataregsub, immwordsub
-		instruction scc "s",              0b0101000011000000, 0b1111000011000000, \
+		instruction scc,       "s",         0b0101000011000000, 0b1111000011000000, \
 			condsub, null, null, moderightsub
-		instruction bra "bra",            0b0110000000000000, 0b1111111100000000, \
+		instruction bra,       "bra",       0b0110000000000000, 0b1111111100000000, \
 			null, widthdispsub, null, dispsub
-		instruction bsr "bsr",            0b0110000100000000, 0b1111111100000000, \
+		instruction bsr,       "bsr",       0b0110000100000000, 0b1111111100000000, \
 			null, widthdispsub, null, dispsub
-		instruction bcc "b",              0b0110000000000000, 0b1111000000000000, \
+		instruction bcc,        "b",        0b0110000000000000, 0b1111000000000000, \
 			condsub, widthdispsub, null, dispsub
 
-		instruction moveq "moveq",         0b0111000000000000, 0b1111000100000000, \
+		instruction moveq,     "moveq",     0b0111000000000000, 0b1111000100000000, \
 			null, widthlongsub, data70sub, datareg119sub
 
-		instruction divu "divu",          0b1000000011000000, 0b1111000111000000, \
+		instruction divu,      "divu",      0b1000000011000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, datareg119sub
-		instruction divs "divs",          0b1000000111000000, 0b1111000111000000, \
+		instruction divs,      "divs",      0b1000000111000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, datareg119sub
-		instruction mulu "mulu",          0b1100000011000000, 0b1111000111000000, \
+		instruction mulu,      "mulu",      0b1100000011000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, datareg119sub
-		instruction muls "muls",          0b1100000111000000, 0b1111000111000000, \
+		instruction muls,      "muls",      0b1100000111000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, datareg119sub
 
-		instruction sbcd "sbcd",          0b1000000100000000, 0b1111000111110000, \
+		instruction sbcd,      "sbcd",      0b1000000100000000, 0b1111000111110000, \
 			null, null, extrightsub, extleftsub
-		instruction abcd "abcd",          0b1100000100000000, 0b1111000111110000, \
+		instruction abcd,      "abcd",      0b1100000100000000, 0b1111000111110000, \
 			null, null, extrightsub, extleftsub
 
-		instruction subx "subx",          0b1001000100000000, 0b1111000100110000, \
+		instruction subx,      "subx",      0b1001000100000000, 0b1111000100110000, \
 			null, width76sub, extrightsub, extleftsub
-		instruction addx "addx",          0b1101000100000000, 0b1111000100110000, \
+		instruction addx,      "addx",      0b1101000100000000, 0b1111000100110000, \
 			null, width76sub, extrightsub, extleftsub
 
-		instruction addq "addq",          0b0101000000000000, 0b1111000100000000, \
+		instruction addq,      "addq",      0b0101000000000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
-		instruction subq "subq",          0b0101000100000000, 0b1111000100000000, \
+		instruction subq,      "subq",      0b0101000100000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
 
-		instruction exg_dd, "exg"         0b1100000101000000, 0b1111000111111000, \
+		instruction exg_dd,    "exg"        0b1100000101000000, 0b1111000111111000, \
 			null, null, datareg119sub, dataregsub
-		instruction exg_aa, "exg"         0b1100000101001000, 0b1111000111111000, \
+		instruction exg_aa,    "exg"        0b1100000101001000, 0b1111000111111000, \
 			null, null, addrreg119sub, addrregsub
-		instruction exg_da, "exg"         0b1100000110001000, 0b1111000111111000, \
+		instruction exg_da,    "exg"        0b1100000110001000, 0b1111000111111000, \
 			null, null, datareg119sub, addrregsub
 
-		instruction or_wr  "or",          0b1000000000000000, 0b1111000100000000, \
+		instruction or_wr,     "or",        0b1000000000000000, 0b1111000100000000, \
 			null, width76sub, moderightsub, datareg119sub
-		instruction or_wea "or",          0b1000000100000000, 0b1111000100000000, \
+		instruction or_wea,    "or",        0b1000000100000000, 0b1111000100000000, \
 			null, width76sub,  datareg119sub, moderightsub
-		instruction and_wr  "and",          0b1100000000000000, 0b1111000100000000, \
+		instruction and_wr,    "and",       0b1100000000000000, 0b1111000100000000, \
 			null, width76sub, moderightsub, datareg119sub
-		instruction and_wea "and",          0b1100000100000000, 0b1111000100000000, \
+		instruction and_wea,   "and",       0b1100000100000000, 0b1111000100000000, \
 			null, width76sub,  datareg119sub, moderightsub
 
-		instruction sub_wr  "sub",        0b1001000000000000, 0b1111000100000000, \
+		instruction sub_wr,    "sub",       0b1001000000000000, 0b1111000100000000, \
 			null, width76sub, moderightsub, datareg119sub
-		instruction sub_wea "sub",        0b1001000100000000, 0b1111000100000000, \
+		instruction sub_wea,   "sub",       0b1001000100000000, 0b1111000100000000, \
 			null, width76sub,  datareg119sub, moderightsub
-		instruction add_wr  "add",        0b1101000000000000, 0b1111000100000000, \
+		instruction add_wr,    "add",       0b1101000000000000, 0b1111000100000000, \
 			null, width76sub, moderightsub, datareg119sub
-		instruction add_wea "add",        0b1101000100000000, 0b1111000100000000, \
+		instruction add_wea,   "add",       0b1101000100000000, 0b1111000100000000, \
 			null, width76sub,  datareg119sub, moderightsub
-		instruction cmpm, "cmpm",         0b1011000100001000, 0b1111000100111000, \
+		instruction cmpm,      "cmpm",      0b1011000100001000, 0b1111000100111000, \
 			null, width76sub, memrightsub, memleftsub
-		instruction cmp, "cmp",           0b1011000000000000, 0b1111000100000000, \
+		instruction cmp,       "cmp",       0b1011000000000000, 0b1111000100000000, \
 			null, width76sub, moderightsub, datareg119sub
-		instruction eor "eor",            0b1011000100000000, 0b1111000100000000, \
+		instruction eor,       "eor",       0b1011000100000000, 0b1111000100000000, \
 			null, width76sub, datareg119sub, moderightsub
 
-		instruction as_m "as",            0b1110000011000000, 0b1111111011000000, \
+		instruction as_m,      "as",        0b1110000011000000, 0b1111111011000000, \
 			shiftdirsub, widthwordsub, null, moderightsub
-		instruction ls_m "ls",            0b1110001011000000, 0b1111111011000000, \
+		instruction ls_m,      "ls",        0b1110001011000000, 0b1111111011000000, \
 			shiftdirsub, widthwordsub, null, moderightsub
-		instruction rox_m "rox",          0b1110010011000000, 0b1111111011000000, \
+		instruction rox_m,     "rox",       0b1110010011000000, 0b1111111011000000, \
 			shiftdirsub, widthwordsub, null, moderightsub
-		instruction ro_m "ro",            0b1110011011000000, 0b1111111011000000, \
+		instruction ro_m,      "ro",        0b1110011011000000, 0b1111111011000000, \
 			shiftdirsub, widthwordsub, null, moderightsub
 
-		instruction as_ir "as",            0b1110000000000000, 0b1111000000111000, \
+		instruction as_ir,     "as",        0b1110000000000000, 0b1111000000111000, \
 			shiftdirsub, width76sub, data119sub, dataregsub
-		instruction ls_ir "ls",            0b1110000000001000, 0b1111000000111000, \
+		instruction ls_ir,     "ls",        0b1110000000001000, 0b1111000000111000, \
 			shiftdirsub, width76sub, data119sub, dataregsub
-		instruction rox_ir "rox",          0b1110000000010000, 0b1111000000111000, \
+		instruction rox_ir,    "rox",       0b1110000000010000, 0b1111000000111000, \
 			shiftdirsub, width76sub, data119sub, dataregsub
-		instruction ro_ir "ro",            0b1110000000011000, 0b1111000000111000, \
+		instruction ro_ir,     "ro",        0b1110000000011000, 0b1111000000111000, \
 			shiftdirsub, width76sub, data119sub, dataregsub
 
-		instruction as_rr "as",            0b1110000000100000, 0b1111000000111000, \
+		instruction as_rr,     "as",        0b1110000000100000, 0b1111000000111000, \
 			shiftdirsub, width76sub, datareg119sub, dataregsub
-		instruction ls_rr "ls",            0b1110000000101000, 0b1111000000111000, \
+		instruction ls_rr,     "ls",        0b1110000000101000, 0b1111000000111000, \
 			shiftdirsub, width76sub, datareg119sub, dataregsub
-		instruction rox_rr "rox",          0b1110000000110000, 0b1111000000111000, \
+		instruction rox_rr,    "rox",       0b1110000000110000, 0b1111000000111000, \
 			shiftdirsub, width76sub, datareg119sub, dataregsub
-		instruction ro_rr "ro",            0b1110000000111000, 0b1111000000111000, \
+		instruction ro_rr,     "ro",        0b1110000000111000, 0b1111000000111000, \
 			shiftdirsub, width76sub, datareg119sub, dataregsub
 
 		.long 0				| end of table
 
-nullwidthstr:	.asciz ""
-bytewidthstr:	.asciz ".b"
-wordwidthstr:	.asciz ".w"
-longwidthstr:	.asciz ".l"
-
-twobwidthtable:	.long bytewidthstr
-onebwidthtable:	.long wordwidthstr
-		.long longwidthstr
+nullwidthstr:	.ascii "\0\0\0\0"
+bytewidthstr:	.ascii ".b\0\0"
+wordwidthstr:	.ascii ".w\0\0"
+longwidthstr:	.ascii ".l\0\0"
 
 hex:		.asciz "0x"
 
