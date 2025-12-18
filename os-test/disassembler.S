@@ -377,7 +377,7 @@ addrregidecsub:	movem.l %d2-%d3,-(%sp)
 5:		move.b #'-',%d0			| add '-' before ea
 		bsr serputchar			| output '-'
 		move.b %d2,%d0			| get original instruction word
-		bsr serputaddrregi		| output '(%a)'
+		bsr serputaddrregi		| output '(%aN)'
 		bra 100f
 
 addrregidispsub:movem.l %d2-%d3,-(%sp)
@@ -388,7 +388,7 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 		move.b #',',%d0			| add ',' after displacement
 		bsr serputchar			| output ','
 		move.b %d2,%d0			| get original instruction word
-		bsr serputaddrreg		| output '%a'
+		bsr serputaorpcreg		| output '%aN' or '%pc'
 		move.b #')',%d0			| add ')' after ea
 		bsr serputchar			| output ')'
 		bra 100f
@@ -403,7 +403,7 @@ addrregiidxsub:	movem.l %d2-%d3,-(%sp)
 		move.b #',',%d0			| add ',' between bytes
 		bsr serputchar			| output ','
 		move.w %d2,%d0			| restore original instruction word
-		bsr serputaddrreg		| output register number
+		bsr serputaorpcreg		| output register number
 		move.b #',',%d0			| add ',' between bytes
 		bsr serputchar			| output ','
 		move.w %d4,%d0			| copy for processing register
@@ -434,11 +434,11 @@ addrregiidxsub:	movem.l %d2-%d3,-(%sp)
 		cmp.w #0b001,%d0		| absolute long
 		beq 2f				| yes, absolute long
 		cmp.w #0b010,%d0		| pc with displacement
-		beq 3f				| yes, pc with displacement
+		beq 6b				| yes, pc with displacement
 		cmp.w #0b011,%d0		| pc with index and displacement
-		beq 4f				| yes, pc with index and displacement
+		beq 7b				| yes, pc with index and displacement
 		cmp.w #0b100,%d0		| imm
-		beq 5f				| yes, imm
+		beq 3f				| yes, imm
 		bra bad				| bad mode
 
 1:		move.b #'(',%d0			| add '(' before absolute word
@@ -457,11 +457,7 @@ addrregiidxsub:	movem.l %d2-%d3,-(%sp)
 		bsr serputchar			| output ')'
 		bra 100f
 
-3:		bra todo			| todo mode (pc with displacement)
-
-4:		bra todo			| todo mode (pc with index and displacement)
-
-5:		move.b #'#',%d0			| output '#'
+3:		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		tst.w %d6			| check width in d6
 		bne 1f				| long width?
@@ -476,6 +472,12 @@ addrregiidxsub:	movem.l %d2-%d3,-(%sp)
 		rts
 
 | printing routines
+
+| print either %pc if d3, the mode, is set to 111 or the address register in d0
+serputaorpcreg:	cmp.w #0b111,%d3		| looking for pc mode
+		bne serputaddrreg		| it's not pc, print the addr reg and return
+		movea.l #pcstr,%a0		| get the pc register string
+		jmp serputstr			| will return
 
 | prints the reg name for data register in d0, changing d0
 serputdatareg:	and.w #0x7,%d0			| mask away unneeded bits
@@ -792,8 +794,7 @@ hex:		.asciz "0x"
 ccrstr:		.asciz "%ccr"
 srstr:		.asciz "%sr"
 uspstr:		.asciz "%usp"
-dataregstr:	.asciz "%d"
-addrregstr:	.asciz "%a"
+pcstr:		.asciz "%pc"
 
 | each must be 4 bytes long
 allregstr:
