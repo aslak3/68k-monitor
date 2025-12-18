@@ -114,32 +114,39 @@ widthlongsub:	movem.l %a0,-(%sp)
 		rts
 
 width76sub:	movem.l %d2/%a0,-(%sp)
-		lsr.w #6,%d2			| get bits 7-6
-		and.w #0x3,%d2			| mask to 2 bits
-		move.l (%d2.w*4,twobwidthtable),%a0
+		lsr.w #4,%d2			| get bits 7-6
+		and.w #0xc,%d2			| mask to 2 bits
+		move.l (%d2.w,twobwidthtable),%a0
 			 			| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
 
 width6sub:	movem.l %d2/%a0,-(%sp)
-		lsr.w #6,%d2			| get bit 6
-		and.w #0x1,%d2			| mask to 1 bit
-		move.l (%d2.w*4,onebwidthtable),%a0
+		lsr.w #4,%d2			| get bit 6
+		and.w #0x4,%d2			| mask to 1 bit
+		move.l (%d2.w,onebwidthtable),%a0
 			 			| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
 
 width8sub:	movem.l %d2/%a0,-(%sp)
-		lsr.w #8,%d2			| get bit 6
-		and.w #0x1,%d2			| mask to 1 bit
-		move.l (%d2.w*4,onebwidthtable),%a0
+		lsr.w #6,%d2			| get bit 6
+		and.w #0x4,%d2			| mask to 1 bit
+		move.l (%d2.w,onebwidthtable),%a0
 			 			| get width string
 		bsr serputstr
 		movem.l (%sp)+,%d2/%a0
 		rts
 
+shiftdirsub:	movem.l %d2/%a0,-(%sp)
+		lsr.w #7,%d2			| get bit 6 shifted up 1
+		and.w #0x2,%d2			| mask to 1 bit
+		lea (%d2.w,allshiftdirstr),%a0	| get shift dir string
+		bsr serputstr
+		movem.l (%sp)+,%d2/%a0
+		rts
 
 widthdispsub:	movem.l %a0,-(%sp)
 		tst.b %d2			| look at displacement
@@ -684,6 +691,11 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction rtr,   "rtr",         0b0100111001110111, 0b1111111111111111, \
 			null, null, null, null
 
+		instruction jsr,   "jsr",         0b0100111010000000, 0b1111111111000000, \
+			null, null, null, moderightsub
+		instruction jmp,   "jmp",         0b0100111011000000, 0b1111111111000000, \
+			null, null, null, moderightsub
+
 		instruction movem_wr,   "movem",  0b0100100010000000, 0b1111111110000000, \
 			null, width6sub, movemsub, moderightsub
 		instruction movem_wm,   "movem",  0b0100110010000000, 0b1111111110000000, \
@@ -719,6 +731,10 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, widthwordsub, moderightsub, datareg119sub
 		instruction divs "divs",          0b1000000111000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, datareg119sub
+		instruction mulu "mulu",          0b1100000011000000, 0b1111000111000000, \
+			null, widthwordsub, moderightsub, datareg119sub
+		instruction muls "muls",          0b1100000111000000, 0b1111000111000000, \
+			null, widthwordsub, moderightsub, datareg119sub
 
 		instruction sbcd "sbcd",          0b1000000100000000, 0b1111000111110000, \
 			null, null, extrightsub, extleftsub
@@ -734,6 +750,13 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 			null, width76sub, data119sub, moderightsub
 		instruction subq "subq",          0b0101000100000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
+
+		instruction exg_dd, "exg"         0b1100000101000000, 0b1111000111111000, \
+			null, null, datareg119sub, dataregsub
+		instruction exg_aa, "exg"         0b1100000101001000, 0b1111000111111000, \
+			null, null, addrreg119sub, addrregsub
+		instruction exg_da, "exg"         0b1100000110001000, 0b1111000111111000, \
+			null, null, datareg119sub, addrregsub
 
 		instruction or_wr  "or",          0b1000000000000000, 0b1111000100000000, \
 			null, width76sub, moderightsub, datareg119sub
@@ -759,6 +782,32 @@ instructions:	instruction ori_ccr,  "ori",	0b0000000000111100, 0b111111111111111
 		instruction eor "eor",            0b1011000100000000, 0b1111000100000000, \
 			null, width76sub, datareg119sub, moderightsub
 
+		instruction as_m "as",            0b1110000011000000, 0b1111111011000000, \
+			shiftdirsub, widthwordsub, null, moderightsub
+		instruction ls_m "ls",            0b1110001011000000, 0b1111111011000000, \
+			shiftdirsub, widthwordsub, null, moderightsub
+		instruction rox_m "rox",          0b1110010011000000, 0b1111111011000000, \
+			shiftdirsub, widthwordsub, null, moderightsub
+		instruction ro_m "ro",            0b1110011011000000, 0b1111111011000000, \
+			shiftdirsub, widthwordsub, null, moderightsub
+
+		instruction as_ir "as",            0b1110000000000000, 0b1111000000111000, \
+			shiftdirsub, width76sub, data119sub, dataregsub
+		instruction ls_ir "ls",            0b1110000000001000, 0b1111000000111000, \
+			shiftdirsub, width76sub, data119sub, dataregsub
+		instruction rox_ir "rox",          0b1110000000010000, 0b1111000000111000, \
+			shiftdirsub, width76sub, data119sub, dataregsub
+		instruction ro_ir "ro",            0b1110000000011000, 0b1111000000111000, \
+			shiftdirsub, width76sub, data119sub, dataregsub
+
+		instruction as_rr "as",            0b1110000000100000, 0b1111000000111000, \
+			shiftdirsub, width76sub, datareg119sub, dataregsub
+		instruction ls_rr "ls",            0b1110000000101000, 0b1111000000111000, \
+			shiftdirsub, width76sub, datareg119sub, dataregsub
+		instruction rox_rr "rox",          0b1110000000110000, 0b1111000000111000, \
+			shiftdirsub, width76sub, datareg119sub, dataregsub
+		instruction ro_rr "ro",            0b1110000000111000, 0b1111000000111000, \
+			shiftdirsub, width76sub, datareg119sub, dataregsub
 
 		.long 0				| end of table
 
@@ -799,6 +848,8 @@ a5regstr:	.asciz "%a5"
 a6regstr:	.asciz "%a6"
 a7regstr:	.asciz "%a7"
 
+		.align 4
+
 allcondstr:	.ascii "t\0\0\0"
 		.ascii "f\0\0\0"
 		.ascii "hi\0\0"
@@ -815,5 +866,10 @@ allcondstr:	.ascii "t\0\0\0"
 		.ascii "lt\0\0"
 		.ascii "gt\0\0"
 		.ascii "le\0\0"
+
+		.align 2
+
+allshiftdirstr:	.asciz "r"
+		.asciz "l"
 
 badinstmsg:	.asciz "<bad instruction>"

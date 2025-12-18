@@ -65,6 +65,11 @@ disasstest:	ori.b #0x12,%ccr
 		rts
 		trapv
 		rtr
+		jsr (0x12345678)
+		jsr (%a1)
+		jmp (%a0)
+		jmp 0x1234
+		jmp 0x12345678
 		movem.w %d0/%a2-%a3,-(%sp)
 		movem.l (%sp)+,%d0-%d6/%a5
 		movem.w %d0,-(%sp)
@@ -88,6 +93,8 @@ smallhop:	chk.w (0x12345678),%d2
 		moveq.l #0x2a,%d2
 		divu.w (0x12345678),%d1
 		divs.w %d2,%d3
+		mulu.w (0x12345678),%d1
+		muls.w (%a4)+,%d5
 		move.b -(%a1),-(%a2)
 		sbcd %d1,%d2
 		sbcd -(%a0),-(%a6)
@@ -113,5 +120,25 @@ smallhop:	chk.w (0x12345678),%d2
 		cmpm.w (%a1)+,(%a2)+
 		cmp.b (0x12345678),%d3
 		cmp.w %d0,%d1
+		exg %d0,%d1
+		exg %a1,%a1
+		exg %d0,%a1
+		exg %a2,%d3
+		asl.w (0x1234)
+		lsr.w (%a0)+
+		roxl.w (0x12,%a2)
+		ror.w (0x12,%a2,%d0.l)
+
+		asl.b #8,%d1
+		lsr.w #4,%d2
+		roxl.l #1,%d3
+		ror.w #3,%d7
+
+		asl.b %d7,%d1
+		lsr.w %d4,%d2
+		roxl.l %d1,%d3
+		ror.w %d3,%d7
+
+
 
 		rts
