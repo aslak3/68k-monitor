@@ -6,10 +6,6 @@
 
 		.global disassemble
 
-		.equ WIDTH_BYTE, 0
-		.equ WIDTH_WORD, 1
-		.equ WIDTH_LONG, 2
-
 		.equ INST_NAME, 0
 		.equ INST_PATTERN, 4
 		.equ INST_MASK, 6
@@ -93,97 +89,85 @@ disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 
 | extraction routines
 
-widthbytesub:	movem.l %a0,-(%sp)
-		movea.l #bytewidthstr,%a0
-		bsr serputstr
-		movem.l (%sp)+,%a0
+widthbytesub:	movea.l #bytewidthstr,%a0	| get the width
+		bsr serputstr			| print the width (.b)
 		rts
 
-widthwordsub:	movem.l %a0,-(%sp)
-		movea.l #wordwidthstr,%a0
-		bsr serputstr
-		movem.l (%sp)+,%a0
+widthwordsub:	movea.l #wordwidthstr,%a0	| get the width
+		bsr serputstr			| print the width (.w)
 		rts
 
-widthlongsub:	movem.l %a0,-(%sp)
-		movea.l #longwidthstr,%a0
-		bsr serputstr
-		moveq #1,%d6			| set d6 means word width by default
-		movem.l (%sp)+,%a0
+widthlongsub:	movea.l #longwidthstr,%a0	| get the width
+		bsr serputstr			| print the width (.l)
+		moveq #1,%d6			| set d6 means long width
 		rts
 
-width76sub:	movem.l %d2/%a0,-(%sp)
+width76sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bits 7-6
 		and.w #0xc,%d2			| mask to 2 bits
-		lea (%d2.w,bytewidthstr),%a0	| get width string
-		bsr serputstr
-		movem.l (%sp)+,%d2/%a0
+		lea (%d2.w,bytewidthstr),%a0	| get width string (2 modes wl)
+		bsr serputstr			| print it
+		move.l (%sp)+,%d2
 		rts
 
-width6sub:	movem.l %d2/%a0,-(%sp)
+width6sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
-		lea (%d2.w,wordwidthstr),%a0	| get width string
-		bsr serputstr
-		movem.l (%sp)+,%d2/%a0
+		lea (%d2.w,wordwidthstr),%a0	| get width string (all 3 modes bwl)
+		bsr serputstr			| print it
+		move.l (%sp)+,%d2
 		rts
 
-width8sub:	movem.l %d2/%a0,-(%sp)
+width8sub:	move.l %d2,-(%sp)
 		lsr.w #6,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
-		lea (%d2.w,wordwidthstr),%a0	| get width string
-		bsr serputstr
-		movem.l (%sp)+,%d2/%a0
+		lea (%d2.w,wordwidthstr),%a0	| get width string (2 modes wl)
+		bsr serputstr			| print it
+		move.l (%sp)+,%d2
 		rts
 
-shiftdirsub:	movem.l %d2/%a0,-(%sp)
+shiftdirsub:	move.l %d2,-(%sp)
 		lsr.w #7,%d2			| get bit 6 shifted up 1
 		and.w #0x2,%d2			| mask to 1 bit
 		lea (%d2.w,allshiftdirstr),%a0	| get shift dir string
-		bsr serputstr
-		movem.l (%sp)+,%d2/%a0
+		bsr serputstr			| print the shift dir (l or r)
+		move.l (%sp)+,%d2
 		rts
 
-widthdispsub:	movem.l %a0,-(%sp)
-		tst.b %d2			| look at displacement
+widthdispsub:	tst.b %d2			| look at displacement
 		beq 1f				| 0 means word
 		movea.l #bytewidthstr,%a0	| so its a byte dispplacement
 		bra 2f				| skip ahead
 1:		movea.l #wordwidthstr,%a0	| so it's a word dispplacement
 2:		bsr serputstr			| print the width suffix
-		movem.l (%sp)+,%a0
 		rts
 
-dispsub:	movem.l %a0,-(%sp)
-		move.b %d2,%d0			| get the displacement
+dispsub:	move.b %d2,%d0			| get the displacement
 		tst.b %d2			| look at displacement
 		beq 1f				| 0 means word
 		bsr hexbyte			| print the displacement
-		bra 2f				| continue
+		rts				| continue
 1:		move.w (%a4)+,%d0		| get the word
-		bsr hexword
-2:		movem.l (%sp)+,%a0
+		bsr hexword			| print the displacement as a word
 		rts
 
-condsub:	movem.l %a0,-(%sp)
-		move.w %d2,%d0			| copy original instruction word
+condsub:	move.w %d2,%d0			| copy original instruction word
 		lsr.w #6,%d0			| shift most of the way
 		and.w #0x003c,%d0		| mask to 4 bits, but up 2
 		lea (allcondstr,%d0.w),%a0	| get the condition string
 		bsr serputstr			| output it
-		movem.l (%sp)+,%a0
 		rts
 
-data30sub:	movem.l %d2/%a0,-(%sp)
+data30sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w %d2,%d0			| copy original instruction word
 		and.w #0xf,%d0			| mask to 4 bits
 		bsr hexbyte			| output the nybble sorta
-		movem.l (%sp)+,%d2/%a0
+		move.l (%sp)+,%d2
 		rts
 
-data119sub:	movem.l %d2/%a0,-(%sp)
+data119sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w %d2,%d0			| copy original instruction word
@@ -191,42 +175,36 @@ data119sub:	movem.l %d2/%a0,-(%sp)
 		lsr.w #1,%d0			| get the data at 11-9
 		and.w #0x7,%d0			| mask to 3 bits
 		bsr hexbyte			| output the nybble sorta
-		movem.l (%sp)+,%d2/%a0
+		move.l (%sp)+,%d2
 		rts
 
-data70sub:	movem.l %d2/%a0,-(%sp)
+data70sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.b %d2,%d0			| copy original instruction word
 		bsr hexbyte			| output the byte
-		movem.l (%sp)+,%d2/%a0
+		move.l (%sp)+,%d2
 		rts
 
-immbytesub:	movem.l %d0/%a0,-(%sp)
-		move.b #'#',%d0			| output '#'
+immbytesub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the byte but in a word
 		bsr hexbyte			| output the byte
-		movem.l (%sp)+,%d0/%a0
 		rts
 
-immwordsub:	movem.l %d0/%a0,-(%sp)
-		move.b #'#',%d0			| output '#'
+immwordsub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the word
 		bsr hexword			| output the word
-		movem.l (%sp)+,%d0/%a0
 		rts
 
-immlongsub:	movem.l %d0/%a0,-(%sp)
-		move.b #'#',%d0			| output '#'
+immlongsub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.l (%a4)+,%d0		| get the long
 		bsr hexlong			| output the long
-		movem.l (%sp)+,%d0/%a0
 		rts
 
-movemsub:	movem.l %d1-%d5/%a0,-(%sp)
+movemsub:	movem.l %d1-%d5,-(%sp)
 		lsr.w #3,%d2			| d3 holds mode only, get bits 5-3
 		and.w #0x7,%d2			| mask to 3 bits
 		cmp.w #0b100,%d2		| address register indirect with predecrement
@@ -255,38 +233,36 @@ movemsub:	movem.l %d1-%d5/%a0,-(%sp)
 4:		add.w %d4,%d5			| scanning the next bit, up or down
 		adda.l #4,%a0			| next reg string
 		dbra %d3,2b			| back for more
-		movem.l (%sp)+,%d1-%d5/%a0
+		movem.l (%sp)+,%d1-%d5
 		rts
 
-datareg119sub:	movem.l %d2/%a0,-(%sp)
+datareg119sub:	move.l %d2,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
-		and.w #0x7,%d2			| mask to 3 bits
 		move.b %d2,%d0			| move to d0 for output
 		bsr serputdatareg		| output '%d'
-		movem.l (%sp)+,%d2/%a0
+		move.l (%sp)+,%d2
 		rts
 
-addrreg119sub:	movem.l %d2/%a0,-(%sp)
+addrreg119sub:	move.l %d2,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
-		and.w #0x7,%d2			| mask to 3 bits
 		move.b %d2,%d0			| move to d0 for output
 		bsr serputaddrreg		| output '%a'
-		movem.l (%sp)+,%d2/%a0
+		move.l (%sp)+,%d2
 		rts
 
-immbwlsub:	movem.l %d2/%a0,-(%sp)
+immbwlsub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
 
-		cmp.w #WIDTH_BYTE,%d2		| byte?
+		cmp.w #0b00,%d2		| byte?
 		beq 1f				| yes, byte
-		cmp.w #WIDTH_WORD,%d2		| word?
+		cmp.w #0b01,%d2		| word?
 		beq 2f				| yes, word
-		cmp.w #WIDTH_LONG,%d2		| long?
+		cmp.w #0b10,%d2		| long?
 		beq 3f				| yes, long
 
 		movea.l #badinstmsg,%a0		| bad width
@@ -304,29 +280,29 @@ immbwlsub:	movem.l %d2/%a0,-(%sp)
 3:		move.l (%a4)+,%d0		| get the long
 		bsr hexlong			| output it
 
-100:		movem.l (%sp)+,%d2/%a0
+100:		move.l (%sp)+,%d2
 		rts
 
-memrightsub:	movem.l %d2-%d3/%a0,-(%sp)
+memrightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
 		bra 4f				| treat as postincrement address mode
 
-memleftsub:	movem.l %d2-%d3/%a0,-(%sp)
+memleftsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		lsr.w #8,%d2			| d2 holds register only
 		lsr.w #1,%d2			| needs one more shift
 		and.w #0x7,%d2			| d2 holds register only
 		bra 4f				| treat as postincrement address mode
 
-extrightsub:	movem.l %d2-%d3/%a0,-(%sp)
+extrightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
 		btst #3,%d3			| see if data or -address
 		beq 1f				| treat as data mode
 		bra 5f				| treat as predecrement adddress mode
 
-extleftsub:	movem.l %d2-%d3/%a0,-(%sp)
+extleftsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		lsr.w #8,%d2			| d2 holds register only
 		lsr.w #1,%d2			| needs one more shift
@@ -335,14 +311,14 @@ extleftsub:	movem.l %d2-%d3/%a0,-(%sp)
 		beq 1f				| treat as data mode
 		bra 5f				| treat as predecrement adddress mode
 
-moderightsub:	movem.l %d2-%d3/%a0,-(%sp)
+moderightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
 		lsr.w #3,%d3			| d3 holds mode only, get bits 5-3
 		and.w #0x7,%d3			| mask to 3 bits
 		bra 0f
 
-modeleftsub:	movem.l %d2-%d3/%a0,-(%sp)
+modeleftsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		lsr.w #8,%d2			| d2 holds register only
 		lsr.w #1,%d2			| needs one more shift
@@ -371,36 +347,40 @@ bad:		movea.l #badinstmsg,%a0		| bad width
 		bsr serputstr			| output bad instruction message
 		bra 100f
 
-dataregsub:	movem.l %d2-%d3/%a0,-(%sp)
+todo:		movea.l #todoinstmsg,%a0	| outputting instr or mode not yet done
+		bsr serputstr			| output todo instruction message
+		bra .endinst			| add a newline and continue
+
+dataregsub:	movem.l %d2-%d3,-(%sp)
 1:		move.b %d2,%d0			| get original instruction word
 		bsr serputdatareg		| output '%d'
 		bra 100f
 
-addrregsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregsub:	movem.l %d2-%d3,-(%sp)
 2:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrreg		| output '%a'
 		bra 100f
 
-addregisub:	movem.l %d2-%d3/%a0,-(%sp)
+addregisub:	movem.l %d2-%d3,-(%sp)
 3:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
-addrregiincsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregiincsub:	movem.l %d2-%d3,-(%sp)
 4:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		move.b #'+',%d0			| add '+' after ea
 		bsr serputchar			| output '+'
 		bra 100f
 
-addrregidecsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregidecsub:	movem.l %d2-%d3,-(%sp)
 5:		move.b #'-',%d0			| add '-' before ea
 		bsr serputchar			| output '-'
 		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
-addrregidispsub:movem.l %d2-%d3/%a0,-(%sp)
+addrregidispsub:movem.l %d2-%d3,-(%sp)
 6:		move.b #'(',%d0			| add '(' before ea
 		bsr serputchar			| output '('
 		move.w (%a4)+,%d0		| get the displacement
@@ -413,7 +393,7 @@ addrregidispsub:movem.l %d2-%d3/%a0,-(%sp)
 		bsr serputchar			| output ')'
 		bra 100f
 
-addrregiidxsub:	movem.l %d2-%d3/%a0,-(%sp)
+addrregiidxsub:	movem.l %d2-%d3,-(%sp)
 7:		move.b #'(',%d0			| add '(' before extension word
 		bsr serputchar			| output '(')'
 		move.w (%a4)+,%d4		| get the extension word
@@ -477,9 +457,9 @@ addrregiidxsub:	movem.l %d2-%d3/%a0,-(%sp)
 		bsr serputchar			| output ')'
 		bra 100f
 
-3:		bra bad				| bad mode (pc with displacement)
+3:		bra todo			| todo mode (pc with displacement)
 
-4:		bra bad				| bad mode (pc with index and displacement)
+4:		bra todo			| todo mode (pc with index and displacement)
 
 5:		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -492,23 +472,23 @@ addrregiidxsub:	movem.l %d2-%d3/%a0,-(%sp)
 		bsr hexlong			| output it
 		bra 100f
 
-100:		movem.l (%sp)+,%d2-%d3/%a0
+100:		movem.l (%sp)+,%d2-%d3
 		rts
 
 | printing routines
 
 | prints the reg name for data register in d0, changing d0
-serputdatareg:	movea.l #dataregstr,%a0		| output '%a'
-		bra 1f
+serputdatareg:	and.w #0x7,%d0			| mask away unneeded bits
+		lsl.w #2,%d0			| each reg is a 4 byte string
+		lea (alldataregstr,%d0.w),%a0	| calc address
+		bsr serputstr			| print it
+		rts
 
 | prints the reg name for address register in d0, changing d0
-serputaddrreg:	movea.l #addrregstr,%a0		| output '%a'
-		bra 1f
-
-1:		bsr serputstr			| output '%d' or '%a'
-		and.b #0x7,%d0			| mask to 3 bits
-		add.b #'0',%d0			| convert to ascii
-		bsr serputchar
+serputaddrreg:	and.w #0x7,%d0			| mask away unneeded bits
+		lsl.w #2,%d0			| each reg is a 4 byte string
+		lea (alladdrregstr,%d0.w),%a0	| calc address
+		bsr serputstr			| print it
 		rts
 
 | same as above but with parentheses around it (indirect mode)
@@ -521,40 +501,36 @@ serputaddrregi:	move.w %d0,%d3			| save d0 in d3
 		bsr serputchar			| output ')'
 		rts
 
-| hexbyte: print a byte with 0x in front
+| simple printing routines
+
+| hexbyte: print a byte from d0 with 0x in front
 hexbyte:	movea.l #hex,%a0
 		bsr serputstr
 		bsr serputbyte
 		rts
 
-| hexword: print a byte with 0x in front
+| hexword: print a word from d0 with 0x in front
 hexword:	movea.l #hex,%a0
 		bsr serputstr
 		bsr serputword
 		rts
 
-| hexlong: print a byte with 0x in front
+| hexlong: print a long from d0 with 0x in front
 hexlong:	movea.l #hex,%a0
 		bsr serputstr
 		bsr serputlong
 		rts
 
-ccrsub:		movem.l %a0,-(%sp)
-		movea.l #ccrstr,%a0
+ccrsub:		movea.l #ccrstr,%a0
 		bsr serputstr
-		movem.l (%sp)+,%a0
 		rts
 
-srsub:		movem.l %a0,-(%sp)
-		movea.l #srstr,%a0
+srsub:		movea.l #srstr,%a0
 		bsr serputstr
-		movem.l (%sp)+,%a0
 		rts
 
-uspsub:		movem.l %a0,-(%sp)
-		movea.l #uspstr,%a0
+uspsub:		movea.l #uspstr,%a0
 		bsr serputstr
-		movem.l (%sp)+,%a0
 		rts
 
 		.section .rodata
@@ -590,9 +566,9 @@ instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111
 			null, width76sub, immbwlsub, moderightsub
 
 		instruction movep_wr,  "movep",     0b0000000100001000, 0b1111000110111000, \
-			null, width6sub, addrregidispsub, datareg119sub // write to register
+			null, width6sub, addrregidispsub, datareg119sub
 		instruction movep_wm,  "movep",     0b0000000110001000, 0b1111000110111000, \
-			null, width6sub, datareg119sub, addrregidispsub // write to memory
+			null, width6sub, datareg119sub, addrregidispsub
 
 		instruction movea_wrw, "movea",     0b0011000001000000, 0b1111000111000000, \
 			null, widthwordsub, moderightsub, addrreg119sub
@@ -805,6 +781,7 @@ instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111
 
 		.long 0				| end of table
 
+| each must be 4 bytes long
 nullwidthstr:	.ascii "\0\0\0\0"
 bytewidthstr:	.ascii ".b\0\0"
 wordwidthstr:	.ascii ".w\0\0"
@@ -818,6 +795,7 @@ uspstr:		.asciz "%usp"
 dataregstr:	.asciz "%d"
 addrregstr:	.asciz "%a"
 
+| each must be 4 bytes long
 allregstr:
 alldataregstr:
 d0regstr:	.asciz "%d0"
@@ -828,7 +806,7 @@ d4regstr:	.asciz "%d4"
 d5regstr:	.asciz "%d5"
 d6regstr:	.asciz "%d6"
 d7regstr:	.asciz "%d7"
-allaregstr:
+alladdrregstr:
 a0regstr:	.asciz "%a0"
 a1regstr:	.asciz "%a1"
 a2regstr:	.asciz "%a2"
@@ -863,3 +841,4 @@ allshiftdirstr:	.asciz "r"
 		.asciz "l"
 
 badinstmsg:	.asciz "<bad instruction>"
+todoinstmsg:	.asciz "<todo instruction>"

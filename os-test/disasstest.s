@@ -136,5 +136,7 @@ smallhop:	chk.w (0x12345678),%d2
 		lsr.w %d4,%d2
 		roxl.l %d1,%d3
 		ror.w %d3,%d7
+|		move.l (0x12,%pc,%d5.w),(0x34,%a1,%d2.l)
+|		move.l ([0x12345678,%pc],%d6.l*8,0x87654321),([0x87654321,%a0],%d2.l*4,0x12345678)
 
 		rts
