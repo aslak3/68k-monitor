@@ -4,19 +4,19 @@
 		.section .text
 		.align 2
 
-		.global disassemble
+		.global disassemble		| the only exported subroutine
 
-		.equ INST_NAME, 0
-		.equ INST_PATTERN, 4
-		.equ INST_MASK, 6
-		.equ INST_CONDSUB, 8
-		.equ INST_WIDTHSUB, 12
-		.equ INST_SRCSUB, 16
-		.equ INST_DSTSUB, 20
-		.equ INST_LENGTH, 24
+		.equ INST_NAME, 0		| printable name, like "move"
+		.equ INST_PATTERN, 4		| word wide bit pattern that matches or not
+		.equ INST_MASK, 6		| input is masked with this before testing
+		.equ INST_CONDSUB, 8		| actually the name suffix sub but normally cond
+		.equ INST_WIDTHSUB, 12		| width subroutine
+		.equ INST_SRCSUB, 16		| source subroutine
+		.equ INST_DSTSUB, 20		| destination subroutine
+		.equ INST_LENGTH, 24		| the length of the record
 
-| disassemble the code from the given address at a0 for the given length in words at d0
-
+| disassemble the code from the given address at a0 for the given number of instructions
+| in d0.w
 disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 		move.w %d0,%d3			| copy instruction count to d3
 		sub.w #1,%d3			| adjust length for loop
@@ -89,27 +89,32 @@ disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 
 | extraction routines
 
+| prints the postfix for byte (1) wide (.b)
 widthbytesub:	movea.l #bytewidthstr,%a0	| get the width
 		bsr serputstr			| print the width (.b)
 		rts
 
+| prints the postfix for word (2) wide (.w)
 widthwordsub:	movea.l #wordwidthstr,%a0	| get the width
 		bsr serputstr			| print the width (.w)
 		rts
 
+| prints the postfix for long (4) wide (.l)
 widthlongsub:	movea.l #longwidthstr,%a0	| get the width
 		bsr serputstr			| print the width (.l)
 		moveq #1,%d6			| set d6 means long width
 		rts
 
+| prints a width (.b, .w or .l) from bits 7:6 in the instruction word
 width76sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bits 7-6
 		and.w #0xc,%d2			| mask to 2 bits
-		lea (%d2.w,bytewidthstr),%a0	| get width string (2 modes wl)
+		lea (%d2.w,bytewidthstr),%a0	| get width string (3 modes bwl)
 		bsr serputstr			| print it
 		move.l (%sp)+,%d2
 		rts
 
+| prints a width (.w or .l) from bit 6 in the instruction word
 width6sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
@@ -118,6 +123,7 @@ width6sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints a width (.w or .l) from bit 8 in the instruction word
 width8sub:	move.l %d2,-(%sp)
 		lsr.w #6,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
@@ -126,6 +132,8 @@ width8sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints a shifting direction, either l or r from bit 6; this is used by the various
+| rotation/shifting instructions like lsl/r, rorxl/r etc
 shiftdirsub:	move.l %d2,-(%sp)
 		lsr.w #7,%d2			| get bit 6 shifted up 1
 		and.w #0x2,%d2			| mask to 1 bit
@@ -134,6 +142,7 @@ shiftdirsub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints the displacement width suffix, either .b or .w, used by branch instructions
 widthdispsub:	tst.b %d2			| look at displacement
 		beq 1f				| 0 means word
 		movea.l #bytewidthstr,%a0	| so its a byte dispplacement
@@ -142,6 +151,8 @@ widthdispsub:	tst.b %d2			| look at displacement
 2:		bsr serputstr			| print the width suffix
 		rts
 
+| prints the actual displacement for a branch instruction. if its a word-wide displacement
+| the word comes a trailing word in the instruction stream
 dispsub:	move.b %d2,%d0			| get the displacement
 		tst.b %d2			| look at displacement
 		beq 1f				| 0 means word
@@ -151,6 +162,7 @@ dispsub:	move.b %d2,%d0			| get the displacement
 		bsr hexword			| print the displacement as a word
 		rts
 
+| prints a condition as obtained from bit 11-8, such as gt, eq, ne etc
 condsub:	move.w %d2,%d0			| copy original instruction word
 		lsr.w #6,%d0			| shift most of the way
 		and.w #0x003c,%d0		| mask to 4 bits, but up 2
@@ -158,6 +170,8 @@ condsub:	move.w %d2,%d0			| copy original instruction word
 		bsr serputstr			| output it
 		rts
 
+| prints any embedded data (a nybble) at 3:0, with a leading hash. this is used by trap
+| at least
 data30sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -167,6 +181,8 @@ data30sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints 3 bits of embedded data at 11:9, with a leading hash. this is used by addq, subq and
+| the immediate rotations
 data119sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -178,6 +194,8 @@ data119sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints the embedded byte at 7:0. this is used by moveq. note that branching does its own
+| thing, since the branch might be escaped into a following word
 data70sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -186,24 +204,32 @@ data70sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints the trailing byte in the instruction stream, used by things like ori
 immbytesub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the byte but in a word
 		bsr hexbyte			| output the byte
 		rts
 
+| prints the trailing word in the instruction stream, used by things like ori but also
+| stop, dbra (for its displacement), and some others
 immwordsub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w (%a4)+,%d0		| get the word
 		bsr hexword			| output the word
 		rts
 
+| prints the trailing long in the instruction stream, currently unused
 immlongsub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.l (%a4)+,%d0		| get the long
 		bsr hexlong			| output the long
 		rts
 
+| decodes a movem register list. this is fairly involved, as it has to factor in the
+| direction of the list, which differs as predecriment (push) maps the registers
+| backwards. TODO currently does not print with nice ranges like %a0-%a3, instead it just
+| uses a slash between registers, which should satisfy gas but it is not great.
 movemsub:	movem.l %d1-%d5,-(%sp)
 		lsr.w #3,%d2			| d3 holds mode only, get bits 5-3
 		and.w #0x7,%d2			| mask to 3 bits
@@ -236,6 +262,7 @@ movemsub:	movem.l %d1-%d5,-(%sp)
 		movem.l (%sp)+,%d1-%d5
 		rts
 
+| prints a data register index (3 bits) at 11:9
 datareg119sub:	move.l %d2,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
@@ -244,6 +271,7 @@ datareg119sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints an address register index (3 bits) at 11:9
 addrreg119sub:	move.l %d2,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
@@ -252,6 +280,8 @@ addrreg119sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
+| prints a byte, word or long immediate which is read from the stream, sized according to
+| bits 7-6 in the instruction word
 immbwlsub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
@@ -283,11 +313,13 @@ immbwlsub:	move.l %d2,-(%sp)
 100:		move.l (%sp)+,%d2
 		rts
 
+| a memory (cmpm) mode special case. outputs as (%aN)+.
 memrightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
 		bra 4f				| treat as postincrement address mode
 
+| ditto but for the high bits
 memleftsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		lsr.w #8,%d2			| d2 holds register only
@@ -295,6 +327,8 @@ memleftsub:	movem.l %d2-%d3,-(%sp)
 		and.w #0x7,%d2			| d2 holds register only
 		bra 4f				| treat as postincrement address mode
 
+| another special case used by bcd and addx/subx instructions. outputs the registers either
+| as a data register of as -(%aN) depending on bit 3
 extrightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
@@ -302,6 +336,7 @@ extrightsub:	movem.l %d2-%d3,-(%sp)
 		beq 1f				| treat as data mode
 		bra 5f				| treat as predecrement adddress mode
 
+| ditto but for the high bits
 extleftsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		lsr.w #8,%d2			| d2 holds register only
@@ -311,6 +346,15 @@ extleftsub:	movem.l %d2-%d3,-(%sp)
 		beq 1f				| treat as data mode
 		bra 5f				| treat as predecrement adddress mode
 
+| this is the common mode selector that handles all the usual modes: data reg, addr reg,
+| address from address reg, address with post and pre inc and dec, address with 16 bit
+| displacement, and address with 8 bit displacement with a 2nd register. ontop of those
+| it decodes the two pc modes, the two absolute modes and the immediate modes (phew)
+| this is just the front end decoder point. note that of course not all instructions
+| support all modes, but the disassembler does not care about this. this is why ordering
+| on the instruction defintions is critical, as some unused modes are used by specific
+| instructions. eg bset and movep overlap, but since bset doesn't use mode address
+| regiser mode, that space can be used by movep.
 moderightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
@@ -318,6 +362,7 @@ moderightsub:	movem.l %d2-%d3,-(%sp)
 		and.w #0x7,%d3			| mask to 3 bits
 		bra 0f
 
+| same for the left hand (high order) bits
 modeleftsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		lsr.w #8,%d2			| d2 holds register only
@@ -351,35 +396,39 @@ todo:		movea.l #todoinstmsg,%a0	| outputting instr or mode not yet done
 		bsr serputstr			| output todo instruction message
 		bra .endinst			| add a newline and continue
 
+| we can also call directly into these, since it only relies on d2 being set. note that
+| d2 and d3 are both stacked as it would be if one of the entry points above was used.
+| also note that this is for decoding the (more common) right hand, low order, bits
+| for where a data register is used in the upper position, eg and, datareg119sub is
+| used
 dataregsub:	movem.l %d2-%d3,-(%sp)
 1:		move.b %d2,%d0			| get original instruction word
 		bsr serputdatareg		| output '%d'
 		bra 100f
 
+| similar to the above but for address registers
 addrregsub:	movem.l %d2-%d3,-(%sp)
 2:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrreg		| output '%a'
 		bra 100f
 
-addregisub:	movem.l %d2-%d3,-(%sp)
 3:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		bra 100f
 
-addrregiincsub:	movem.l %d2-%d3,-(%sp)
 4:		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%a)'
 		move.b #'+',%d0			| add '+' after ea
 		bsr serputchar			| output '+'
 		bra 100f
 
-addrregidecsub:	movem.l %d2-%d3,-(%sp)
 5:		move.b #'-',%d0			| add '-' before ea
 		bsr serputchar			| output '-'
 		move.b %d2,%d0			| get original instruction word
 		bsr serputaddrregi		| output '(%aN)'
 		bra 100f
 
+| also used by movep, address register with word displacement
 addrregidispsub:movem.l %d2-%d3,-(%sp)
 6:		move.b #'(',%d0			| add '(' before ea
 		bsr serputchar			| output '('
@@ -393,7 +442,8 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 		bsr serputchar			| output ')'
 		bra 100f
 
-addrregiidxsub:	movem.l %d2-%d3,-(%sp)
+| this big block deals with addr reg or pc base register with byte wide and register
+| displacements
 7:		move.b #'(',%d0			| add '(' before extension word
 		bsr serputchar			| output '(')'
 		move.w (%a4)+,%d4		| get the extension word
@@ -427,6 +477,8 @@ addrregiidxsub:	movem.l %d2-%d3,-(%sp)
 		bsr serputchar			| output ','
 		bra 100f
 
+| these are all the 0b111 modes. note that the pc modes with reg set to 0b010 or 0b011,
+| use the code above
 10:		move.w %d2,%d0			| get original instruction word
 		and.w #0x7,%d0			| mask to 3 bits
 		cmp.w #0b000,%d0		| absolute word
@@ -538,6 +590,8 @@ uspsub:		movea.l #uspstr,%a0
 		.section .rodata
 		.align 2
 
+| instruction label, printable name, word match bits, word mask bits,
+|   name suffix decoder, width suffix decoder, source decoder, destination decoder
 instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111111111, \
 			null, widthbytesub, immbytesub, ccrsub
 		instruction ori_sr,    "ori",	    0b0000000001111100, 0b1111111111111111, \
