@@ -142,7 +142,8 @@ shiftdirsub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
-| prints the displacement width suffix, either .b or .w, used by branch instructions
+| prints the displacement width suffix by checking the 8 bit displacement for 9, either
+| .b or .w, used by branch instructions
 widthdispsub:	tst.b %d2			| look at displacement
 		beq 1f				| 0 means word
 		movea.l #bytewidthstr,%a0	| so its a byte dispplacement
@@ -153,13 +154,28 @@ widthdispsub:	tst.b %d2			| look at displacement
 
 | prints the actual displacement for a branch instruction. if its a word-wide displacement
 | the word comes a trailing word in the instruction stream
-dispsub:	move.b %d2,%d0			| get the displacement
+dispsub:	movem.l %d1/%a1,-(%sp)
+		movea.l %a4,%a1			| save current pc, as we need bra addr
+		move.b %d2,%d0			| get the displacement
 		tst.b %d2			| look at displacement
 		beq 1f				| 0 means word
 		bsr hexbyte			| print the displacement
-		rts				| continue
-1:		move.w (%a4)+,%d0		| get the word
+		ext.w %d0			| extend (signed) the byte to a word
+		bra 2f				| hop the word disp grab as done already
+1:		move.w (%a4)+,%d0		| get the word from the stream
 		bsr hexword			| print the displacement as a word
+2:		ext.l %d0			| extend the displacement word to a long
+		move.l %d0,%d1			| save displacement as long in d1
+		move.b #' ',%d0			| print a space between the displacement
+		bsr serputchar			| ... and the target pc
+		move.b #'<',%d0			| print chrevrons around target pc
+		bsr serputchar			| and print
+		add.l %a1,%d1			| add on the current address
+		move.l %d1,%d0			| need to print the address in d0
+		bsr hexlong			| print the full address
+		move.b #'>',%d0			| print chrevrons around target pc
+		bsr serputchar			| print the closing chevron around addr
+		movem.l (%sp)+,%d1/%a1
 		rts
 
 | prints a condition as obtained from bit 11-8, such as gt, eq, ne etc
