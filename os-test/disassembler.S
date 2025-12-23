@@ -105,7 +105,7 @@ widthlongsub:	movea.l #longwidthstr,%a0	| get the width
 		moveq #1,%d6			| set d6 means long width
 		rts
 
-| prints a width (.b, .w or .l) from bits 7:6 in the instruction word
+| prints a width (.b, .w or .l) from bits 7-6 in the instruction word
 width76sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bits 7-6
 		and.w #0xc,%d2			| mask to 2 bits
@@ -153,7 +153,7 @@ widthdispsub:	tst.b %d2			| look at displacement
 		rts
 
 | prints the actual displacement for a branch instruction. if its a word-wide displacement
-| the word comes a trailing word in the instruction stream
+| the word comes in a trailing word from the instruction stream
 dispsub:	movem.l %d1/%a1,-(%sp)
 		movea.l %a4,%a1			| save current pc, as we need bra addr
 		move.b %d2,%d0			| get the displacement
@@ -186,7 +186,7 @@ condsub:	move.w %d2,%d0			| copy original instruction word
 		bsr serputstr			| output it
 		rts
 
-| prints any embedded data (a nybble) at 3:0, with a leading hash. this is used by trap
+| prints any embedded data (a nybble) at 3-0, with a leading hash. this is used by trap
 | at least
 data30sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
@@ -197,7 +197,7 @@ data30sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
-| prints 3 bits of embedded data at 11:9, with a leading hash. this is used by addq, subq and
+| prints 3 bits of embedded data at 11-9, with a leading hash. this is used by addq, subq and
 | the immediate rotations
 data119sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
@@ -210,7 +210,7 @@ data119sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
-| prints the embedded byte at 7:0. this is used by moveq. note that branching does its own
+| prints the embedded byte at 7-0. this is used by moveq. note that branching does its own
 | thing, since the branch might be escaped into a following word
 data70sub:	move.l %d2,-(%sp)
 		move.b #'#',%d0			| output '#'
@@ -278,7 +278,7 @@ movemsub:	movem.l %d1-%d5,-(%sp)
 		movem.l (%sp)+,%d1-%d5
 		rts
 
-| prints a data register index (3 bits) at 11:9
+| prints a data register index (3 bits) at 11-9
 datareg119sub:	move.l %d2,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
@@ -287,7 +287,7 @@ datareg119sub:	move.l %d2,-(%sp)
 		move.l (%sp)+,%d2
 		rts
 
-| prints an address register index (3 bits) at 11:9
+| prints an address register index (3 bits) at 11-9
 addrreg119sub:	move.l %d2,-(%sp)
 		lsr.w #8,%d2			| get bits 11-9
 		lsr.w #1,%d2			| needs one more shift
@@ -344,7 +344,7 @@ memleftsub:	movem.l %d2-%d3,-(%sp)
 		bra 4f				| treat as postincrement address mode
 
 | another special case used by bcd and addx/subx instructions. outputs the registers either
-| as a data register of as -(%aN) depending on bit 3
+| as a data register or as -(%aN) depending on bit 3
 extrightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
@@ -369,8 +369,8 @@ extleftsub:	movem.l %d2-%d3,-(%sp)
 | this is just the front end decoder point. note that of course not all instructions
 | support all modes, but the disassembler does not care about this. this is why ordering
 | on the instruction defintions is critical, as some unused modes are used by specific
-| instructions. eg bset and movep overlap, but since bset doesn't use mode address
-| regiser mode, that space can be used by movep.
+| instructions. eg bset and movep overlap, but since bset doesn't use address regiser
+| mode, that space can be used by movep
 moderightsub:	movem.l %d2-%d3,-(%sp)
 		move.w %d2,%d3			| copy original instruction word
 		and.w #0x7,%d2			| d2 holds register only
@@ -414,9 +414,8 @@ todo:		movea.l #todoinstmsg,%a0	| outputting instr or mode not yet done
 
 | we can also call directly into these, since it only relies on d2 being set. note that
 | d2 and d3 are both stacked as it would be if one of the entry points above was used.
-| also note that this is for decoding the (more common) right hand, low order, bits
-| for where a data register is used in the upper position, eg and, datareg119sub is
-| used
+| also note that this is for decoding the (more common) right hand, low order, bits.
+| for where a data register is used in the upper position datareg119sub is used
 dataregsub:	movem.l %d2-%d3,-(%sp)
 1:		move.b %d2,%d0			| get original instruction word
 		bsr serputdatareg		| output '%d'
@@ -469,7 +468,7 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 		move.b #',',%d0			| add ',' between bytes
 		bsr serputchar			| output ','
 		move.w %d2,%d0			| restore original instruction word
-		bsr serputaorpcreg		| output register number
+		bsr serputaorpcreg		| output register number or pc
 		move.b #',',%d0			| add ',' between bytes
 		bsr serputchar			| output ','
 		move.w %d4,%d0			| copy for processing register
@@ -502,9 +501,9 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 		cmp.w #0b001,%d0		| absolute long
 		beq 2f				| yes, absolute long
 		cmp.w #0b010,%d0		| pc with displacement
-		beq 6b				| yes, pc with displacement
+		beq 6b				| yes, pc with displacement ^^
 		cmp.w #0b011,%d0		| pc with index and displacement
-		beq 7b				| yes, pc with index and displacement
+		beq 7b				| yes, pc with index and displacement ^^
 		cmp.w #0b100,%d0		| imm
 		beq 3f				| yes, imm
 		bra bad				| bad mode
