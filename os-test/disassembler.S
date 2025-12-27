@@ -15,23 +15,53 @@
 		.equ INST_DSTSUB, 20		| destination subroutine
 		.equ INST_LENGTH, 24		| the length of the record
 
+		.equ DEVICE_GETCHAR, 0		| device get char offset
+		.equ DEVICE_PUTCHAR, 4		| device put char offset
+		.equ DEVICE_CURPOS, 8		| device current position offset
+		.equ DEVICE_BUFFER, 10		| device buffer
+
+| output routine for the disassembler
+
+| putchar routine for printing instuctions; char in d0, buffer is held in "device" pointer at
+| a5. the buffer structure also holds a current position counter at offset 8
+instrputchar:	move.w %d1,-(%sp)		| save d1
+		move.w (DEVICE_CURPOS,%a5),%d1	| get counter to current byte in d1
+		move.b %d0,(DEVICE_BUFFER,%d1.w,%a5)
+						| put char in d0 into buffer
+		move.b #0,(DEVICE_BUFFER+1,%d1.w,%a5)
+						| null terminate
+		add.w #1,(DEVICE_CURPOS,%a5)	| advance current position
+		move.w (%sp)+,%d1		| restore d1
+		rts
+
 | disassemble the code from the given address at a0 for the given number of instructions
 | in d0.w
-disassemble:	move.l %a0,%a4			| copy address to a4 for processing
+disassemble:	move.l %a5,iodevice		| save current io device
+		movea.l #instrdevice,%a5	| instruction output device needs its putchar
+		move.l #instrputchar,(DEVICE_PUTCHAR,%a5)
+						| set the putchar routine
+
+		move.l %a0,%a4			| copy address to a4 for processing
 		move.w %d0,%d3			| copy instruction count to d3
 		sub.w #1,%d3			| adjust length for loop
 
 | in the loop:
 |     a4 = current address
 
-.toploop:	move.l %a4,%d0			| point to instruction for address printing
+.toploop:	movea.l iodevice,%a5		| get the port for printing everything
+		move.l %a4,%d0			| point to instruction for address printing
 		bsr serputlong			| output the address
 		move.b #':',%d0			| add colon after address
 		bsr serputchar			| output colon
 		move.b #'\t',%d0		| add tab after colon
-		bsr serputchar			| output space
+		bsr serputchar			| output tab
 
-		move.w (%a4)+,%d2		| fetch the instruction word and keep in d2
+		movea.l #instrdevice,%a5	| point to instruction device for instruction words
+		move.w #0,(DEVICE_CURPOS,%a5)	| reset current position in buffer
+		move.w #0,wordcharcount		| reset word char count
+
+		bsr nextword			| get the instruction word into d0
+		move.w %d0,%d2			| fetch the instruction word and keep in d2
 		movea.l #instructions,%a1	| point to start of instruction table
 .testloop:	tst.l (INST_NAME,%a1)		| end of table?
 		beq .badinst			| unknown instruction
@@ -82,10 +112,56 @@ disassemble:	move.l %a0,%a4			| copy address to a4 for processing
 		beq .endinst			| skip it
 		jsr (%a0)			| call dest extraction routine
 
-.endinst:	movea.l #newlinemsg,%a0		| outputting newline after instruction
+.endinst:	movea.l iodevice,%a5		| get the port for printing everything
+
+		move.b #' ',%d0			| we now are adding spaces before words output
+		move.w wordcharcount,%d1	| check how many chars output so far
+1:		bsr serputchar			| output space
+		add.w #1,%d1			| increment count
+		cmp.w #24,%d1			| done all spaces to line up instruction?
+		blt 1b				| more spaces to go
+
+		movea.l #instbuffer,%a0		| get instruction buffer
+		bsr serputstr			| output the instruction buffer
+		movea.l #newlinemsg,%a0		| outputting newline after instruction
 		bsr serputstr			| output newline
 
 		bra .continue			| continue with next instruction
+
+| advanaces, by one word, a4 which points to the current instruction in the stream, returning
+| the word in d0 which is guaranteed to have the top word clear
+nextword:	move.l %a5,-(%sp)		| save a5 the device pointer
+		movea.l iodevice,%a5		| get the port for printing everything
+		cmp.w #18,wordcharcount		| 20 chars output?
+		blt 1f				| skip newline if not yet
+		movea.l #newlinemsg,%a0		| output newline after 4 words
+		bsr serputstr			| output newline
+		move.b #'\t',%d0		| add tab after newline
+		bsr serputchar			| output tab
+		bsr serputchar			| output another tab
+		move.w #0,wordcharcount		| reset word char count
+1:		clr.l %d0			| clear d0 to clear the top word
+		move.w (%a4)+,%d0		| advance to next word
+		bsr serputword			| output the word from the stream
+		swap %d0			| swap to get high word
+		move.b #' ',%d0			| output space after word
+		bsr serputchar			| output space
+		add.w #5,wordcharcount		| increment word char count
+		swap %d0			| restore original word
+		move.l (%sp)+,%a5		| restore a5 the device pointer
+		rts
+
+| uses the above sub to read a long from the instruction stream; two words will be read and
+| printed and the long returned in d0
+nextlong:	move.l %d1,-(%sp)		| save d1
+		bsr nextword			| get high word
+		move.w %d0,-(%sp)		| save high word
+		bsr nextword			| get low word
+		move.w (%sp)+,%d1		| restore high word
+		swap %d1			| shift high word up
+		or.l %d1,%d0			| combine to long
+		move.l (%sp)+,%d1		| restore d1
+		rts
 
 | extraction routines
 
@@ -162,7 +238,7 @@ dispsub:	movem.l %d1/%a1,-(%sp)
 		bsr hexbyte			| print the displacement
 		ext.w %d0			| extend (signed) the byte to a word
 		bra 2f				| hop the word disp grab as done already
-1:		move.w (%a4)+,%d0		| get the word from the stream
+1:		bsr nextword			| get the word from the stream
 		bsr hexword			| print the displacement as a word
 2:		ext.l %d0			| extend the displacement word to a long
 		move.l %d0,%d1			| save displacement as long in d1
@@ -223,7 +299,7 @@ data70sub:	move.l %d2,-(%sp)
 | prints the trailing byte in the instruction stream, used by things like ori
 immbytesub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
-		move.w (%a4)+,%d0		| get the byte but in a word
+		bsr nextword			| get the byte but in a word
 		bsr hexbyte			| output the byte
 		rts
 
@@ -231,14 +307,14 @@ immbytesub:	move.b #'#',%d0			| output '#'
 | stop, dbra (for its displacement), and some others
 immwordsub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
-		move.w (%a4)+,%d0		| get the word
+		bsr nextword			| get the word
 		bsr hexword			| output the word
 		rts
 
 | prints the trailing long in the instruction stream, currently unused
 immlongsub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
-		move.l (%a4)+,%d0		| get the long
+		bsr nextlong			| get the long
 		bsr hexlong			| output the long
 		rts
 
@@ -259,7 +335,8 @@ movemsub:	movem.l %d1-%d5,-(%sp)
 0:		move.w #-1,%d4			| scan direction (down)
 		move.w #15,%d5			| initial bit test pos
 
-1:		move.w (%a4)+,%d1		| get the register word
+1:		bsr nextword			| get the register list word
+		move.w %d0,%d1			| get the register where we want it
 		moveq #0,%d2			| flag to avoid printing first slash
 		move.w #15,%d3			| bit counter
 		movea.l #allregstr,%a0		| count into the list of regs, longs
@@ -315,15 +392,15 @@ immbwlsub:	move.l %d2,-(%sp)
 		bsr serputstr			| output bad instruction message
 		bra 100f
 
-1:		move.w (%a4)+,%d0		| get the byte in low half
+1:		bsr nextword			| get the byte in low half
 		bsr hexbyte			| output it
 		bra 100f
 
-2:		move.w (%a4)+,%d0		| get the word
+2:		bsr nextword			| get the word
 		bsr hexword			| output it
 		bra 100f
 
-3:		move.l (%a4)+,%d0		| get the long
+3:		bsr nextlong			| get the long
 		bsr hexlong			| output it
 
 100:		move.l (%sp)+,%d2
@@ -447,7 +524,7 @@ addrregsub:	movem.l %d2-%d3,-(%sp)
 addrregidispsub:movem.l %d2-%d3,-(%sp)
 6:		move.b #'(',%d0			| add '(' before ea
 		bsr serputchar			| output '('
-		move.w (%a4)+,%d0		| get the displacement
+		bsr nextword			| get the displacement
 		bsr hexword			| output the displacement
 		move.b #',',%d0			| add ',' after displacement
 		bsr serputchar			| output ','
@@ -461,7 +538,8 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 | displacements
 7:		move.b #'(',%d0			| add '(' before extension word
 		bsr serputchar			| output '(')'
-		move.w (%a4)+,%d4		| get the extension word
+		bsr nextword			| get the extension word
+		move.w %d0,%d4			| get the extension word where we want it
 		move.w %d4,%d0			| copy for processing offfset
 		and.w #0x00ff,%d0		| mask to low byte
 		bsr hexbyte			| output low byte offset (signed!)
@@ -510,7 +588,7 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 
 1:		move.b #'(',%d0			| add '(' before absolute word
 		bsr serputchar			| output '('
-		move.w (%a4)+,%d0		| get the absolute word
+		bsr nextword			| get the absolute word
 		bsr hexword			| output it
 		move.b #')',%d0			| add ')' after ea
 		bsr serputchar			| output ')'
@@ -518,7 +596,7 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 
 2:		move.b #'(',%d0			| add '(' before absolute long
 		bsr serputchar			| output '('
-		move.l (%a4)+,%d0		| get the absolute long
+		bsr nextlong			| get the absolute long
 		bsr hexlong			| output it
 		move.b #')',%d0			| add ')' after ea
 		bsr serputchar			| output ')'
@@ -528,10 +606,10 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 		bsr serputchar			| output it
 		tst.w %d6			| check width in d6
 		bne 1f				| long width?
-		move.w (%a4)+,%d0		| get the imm word
+		bsr nextword			| get the imm word
 		bsr hexword			| output it
 		bra 100f
-1:		move.l (%a4)+,%d0		| get the imm long
+1:		bsr nextlong			| get the imm long
 		bsr hexlong			| output it
 		bra 100f
 
@@ -912,3 +990,16 @@ allshiftdirstr:	.asciz "r"
 
 badinstmsg:	.asciz "<bad instruction>"
 todoinstmsg:	.asciz "<todo instruction>"
+
+		.section .bss
+		.align 2
+
+iodevice:	.long 0				| unset at start
+
+| buffer for outputting disassembled instructions
+instrdevice:	.long 0				| read is not used
+		.long 0				| write function (set in code)
+		.word 0				| pointer to the current byte in the buffer
+instbuffer:	.space 256			| space for output buffer
+
+wordcharcount:	.word 0				| count of chars in word output buffer
