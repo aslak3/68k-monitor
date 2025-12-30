@@ -37,6 +37,10 @@ commandarray:   nocheckcommand "_memoryinit"
 
 		checkcommand "_disass", 3, 2
 
+		checkcommand "_listbps", 0
+		checkcommand "_addbp", 3, 2
+		checkcommand "_delbp", 2
+
 		endcommand 0x0
 
 		.section .text
@@ -184,6 +188,19 @@ _disass:	move.l (0*4,%a1),%a0		| get address to disassemble
 		move.w (1*4+2,%a1),%d0		| get the length
 		bsr disassemble			| disassemble it
 		rts
+
+_listbps:	bsr listbps
+		rts
+
+_addbp:		move.l (0*4,%a1),%a0		| get address
+		move.w (1*4+2,%a1),%d0		| get index
+		bsr addbp
+		rts
+
+_delbp:		move.w (0*4+2,%a1),%d0		| get index
+		bsr delbp
+		rts
+
 
 		.section .rodata
 		.align 4

@@ -8,8 +8,8 @@ LIBS = ../serial.o ../constants.o ../strings.o ../debug.o
 ETH_SENDER = ../eth-sender/eth-sender
 
 BIN = os-test.bin
-OBJS = main.o memory.o lists.o dumper.o tasks.o ticker.o debugger.o disassembler.o \
-	disasstest.o
+OBJS = main.o memory.o lists.o dumper.o tasks.o ticker.o debugger.o breakpoints.o \
+	disassembler.o disasstest.o
 
 all: $(BIN)
 
