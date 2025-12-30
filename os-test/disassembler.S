@@ -35,8 +35,9 @@ instrputchar:	move.w %d1,-(%sp)		| save d1
 		rts
 
 | disassemble the code from the given address at a0 for the given number of instructions
-| in d0.w
-disassemble:	move.l %a5,iodevice		| save current io device
+| in d0.w. saves all used registers, but a0 and d0 will be modified on exit
+disassemble:	movem.l %d1-%d6/%a1-%a4,-(%sp)	| save all used registers
+		move.l %a5,iodevice		| save current io device
 		movea.l #instrdevice,%a5	| instruction output device needs its putchar
 		move.l #instrputchar,(DEVICE_PUTCHAR,%a5)
 						| set the putchar routine
@@ -73,6 +74,7 @@ disassemble:	move.l %a5,iodevice		| save current io device
 		bra .testloop			| keep looking
 
 .continue:	dbra %d3,.toploop		| loop for all instructions
+		movem.l (%sp)+,%d1-%d6/%a1-%a4	| restore all used registers
 		rts
 
 .badinst:	movea.l #badinstmsg,%a0		| outputting bad instruction message
