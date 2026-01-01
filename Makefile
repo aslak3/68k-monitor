@@ -10,12 +10,17 @@ FLASHER = ./tools/flasher
 BIN = monitor.bin
 OBJS = main.o exceptions.o constants.o commands.o serial.o strings.o parser.o debug.o \
 	misc.o ticks.o memtest.o \
+	breakpoints.o disassembler.o disasstest.o \
 	eth.o string.o ne2k.o asm-wrapper.o mini-printf.o
 
 all: $(BIN)
 
+disasstest.o: disasstest.s
+	$(AS) -mcpu=68000 --fatal-warnings $< -o $@
 %.o: %.s
 	$(AS) -mcpu=68030 -m68881 --fatal-warnings $< -o $@
+%.o: %.S include/*.i
+	$(GCC) -mcpu=68030 -m68881 -Xfatal-warnings -c $< -o $@
 
 %.o: %.c
 	$(GCC) -std=c99 -O2 -mstrict-align -fomit-frame-pointer -ffreestanding  -Iinclude -Wall -mcpu=68030 -m68881 -c $< -o $@

@@ -40,6 +40,11 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "printregs"
 		checkcommand "setdreg", 1, 3
 		checkcommand "setareg", 1, 3
+		checkcommand "disass", 3, 2
+		checkcommand "listbps", 0
+		checkcommand "addbp", 3, 2
+		checkcommand "delbp", 2
+
 		endcommand 0x400		| table in ram?
 
 		.section .text
@@ -232,6 +237,11 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    setareg regnum.b val.l : set address register\r\n"
 		.ascii "    runat addr.l : resume execution at addr\r\n"
 		.ascii "    resume : resume execution\r\n"
+		.ascii "    disass addr.l count.w : disassemble count instructions from addr\r\n"
+		.ascii "Breakpoints:\r\n"
+		.ascii "    listbps : list all breakpoints\r\n"
+		.ascii "    addbp addr.l index.w : add breakpoint at addr at index (0-7)\r\n"
+		.ascii "    delbp index.w : delete breakpoint at index (0-7)\r\n"
 		.ascii "Other:\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser\r\n"
 		.ascii "    testtransmit : test the ethernet by sending a packet\r\n"
@@ -317,11 +327,14 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 
 resume:		movem.l savedregisters,%d0-%d7/%a0-%a7
 						| restore all registers
+		sub.l #2,(2,%sp)		| back up pc to re-execute instruction
 		rte
 
-runat:		movea.l (0*4,%a1),%a0		| get address to resume at
-		move.l %a0,(2,%sp)		| set pc
-		bra resume
+runat:		move.l (0*4,%a1),newpc		| save address to resume at
+		movem.l savedregisters,%d0-%d7/%a0-%a7
+						| restore all registers
+		move.l newpc,(2,%sp)		| set pc
+		rte
 
 printregs:	movea.l #savedregisters,%a1	| get regs
 		clr.w %d1			| count of reg from 0
@@ -360,6 +373,23 @@ setreg:		move.l (0*4,%a1),%d0		| get the register number
 		move.l %d1,(%a0,%d0)		| set the register
 		rts
 
+disass:		move.l (0*4,%a1),%a0		| get address to disassemble
+		move.w (1*4+2,%a1),%d0		| get the length
+		bsr disassemble			| disassemble it
+		rts
+
+listbps:	bsr listbreakpoints
+		rts
+
+addbp:		move.l (0*4,%a1),%a0		| get address
+		move.w (1*4+2,%a1),%d0		| get index
+		bsr addbreakpoint
+		rts
+
+delbp:		move.w (0*4+2,%a1),%d0		| get index
+		bsr delbreakpoint
+		rts
+
 		.section .rodata
 		.align 2
 
@@ -373,6 +403,8 @@ filesizemsg:	.asciz "File size: "
 
 		.section .bss
 		.align 2
+
+newpc:		.space 4			| space for new pc
 
 		.section .rodata
 		.align 2

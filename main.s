@@ -38,16 +38,11 @@ start:		movea.l #0x01000000,%sp		| 16 MB
 		move.w #0x2000,%sr
 
 		move.b #0,LED
-		move.l #0xcabba6e,%d0
-		movea.l #0xdeadbeef,%a5
-
 1:		trap #0				| enter monitor
-		addq.l #1,%d0			| just change d0
 		bra 1b				| run loop again
 
 entry:		movem.l %d0-%d7/%a0-%a7,savedregisters
 						| save all registers
-
 
 		movea.l #portadevice,%a5	| point a5 to port a device
 		movea.l #trap0msg,%a0		| load address of trap0 message

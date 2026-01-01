@@ -8,8 +8,7 @@ LIBS = ../serial.o ../constants.o ../strings.o ../debug.o
 ETH_SENDER = ../eth-sender/eth-sender
 
 BIN = os-test.bin
-OBJS = main.o memory.o lists.o dumper.o tasks.o ticker.o debugger.o breakpoints.o \
-	disassembler.o disasstest.o
+OBJS = main.o memory.o lists.o dumper.o tasks.o testbps.o
 
 all: $(BIN)
 
@@ -17,8 +16,6 @@ all: $(BIN)
 	$(AS) -mcpu=68030 -m68881 -fatal-warnings -c $< -o $@
 %.o: %.S include/*.i
 	$(GCC) -mcpu=68030 -m68881 -Xfatal-warnings -c $< -o $@
-disasstest.o: disasstest.s
-	$(AS) -mcpu=68000 --fatal-warnings $< -o $@
 
 os-test.elf: $(OBJS)
 	$(LD) -Map=os-test.map -T linker.scr $^ $(LIBS) -o $@

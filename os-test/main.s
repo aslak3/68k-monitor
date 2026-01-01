@@ -30,17 +30,6 @@ commandarray:   nocheckcommand "_memoryinit"
 		nocheckcommand "_testtask2"
 		checkcommand "_taskdump", 3
 
-		nocheckcommand "_tickerinit"
-
-		nocheckcommand "_trapinit"
-		nocheckcommand "_debugger"
-
-		checkcommand "_disass", 3, 2
-
-		checkcommand "_listbps", 0
-		checkcommand "_addbp", 3, 2
-		checkcommand "_delbp", 2
-
 		endcommand 0x0
 
 		.section .text
@@ -161,9 +150,6 @@ _taskdump:	move.l (0*4,%a1),%a0
 		bsr taskdump
 		rts
 
-_tickerinit:	bsr tickerinit
-		rts
-
 testtaskcode1:	lea (testmessage1,%pc),%a0
 		| forbid
 		bsr serputstr
@@ -183,24 +169,6 @@ testtaskcode2:	lea (testmessage2,%pc),%a0
 1:		dbra %d0,1b
 		dbra %d1,2b
 		bra testtaskcode2
-
-_disass:	move.l (0*4,%a1),%a0		| get address to disassemble
-		move.w (1*4+2,%a1),%d0		| get the length
-		bsr disassemble			| disassemble it
-		rts
-
-_listbps:	bsr listbps
-		rts
-
-_addbp:		move.l (0*4,%a1),%a0		| get address
-		move.w (1*4+2,%a1),%d0		| get index
-		bsr addbp
-		rts
-
-_delbp:		move.w (0*4+2,%a1),%d0		| get index
-		bsr delbp
-		rts
-
 
 		.section .rodata
 		.align 4
