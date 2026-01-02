@@ -49,6 +49,8 @@ entry:		movem.l %d0-%d7/%a0-%a7,savedregisters
 		bsr serputstr			| print trap0 message
 		move.l (2,%sp),%d0		| get pc
 		bsr serputlong			| print pc
+		subq.l #2,%d0			| adjust pc to point to trap
+		move.l %d0,resumepc		| save it for breakpoint handling
 		movea.l #srmsg,%a0		| load sr message
 		bsr serputstr			| print sr message
 		move.w (0,%sp),%d0		| get sr
@@ -60,6 +62,18 @@ entry:		movem.l %d0-%d7/%a0-%a7,savedregisters
 		bsr serputword			| print it
 		lea (newlinemsg,%pc),%a0	| need a newline
 		bsr serputstr			| and print it
+		lea (newlinemsg,%pc),%a0	| need a newline
+		bsr serputstr			| and another newline
+
+		bsr cleartraps			| clear any breakpoints set
+
+		bsr printregs			| print all registers
+		lea (newlinemsg,%pc),%a0	| need a newline
+		bsr serputstr			| and print it
+
+		movea.l resumepc,%a0		| get the resume pc
+		move.w #4,%d0			| print four instructions after trap
+		bsr disassemble			| disassemble the instruction at the trap
 
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
 		bsr serputstr			| ...

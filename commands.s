@@ -4,12 +4,11 @@
 		.include "include/ascii.i"
 		.include "include/hardware.i"
 
-		.global commandarray
-		.global clear
-		.global testtextmode
-
 		.section .rodata
 		.align 2
+
+		.global commandarray
+		.global printregs
 
 | command array consists of a command string link and some userdata for
 | each named command. this userdata points to another record which consists
@@ -235,13 +234,13 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    printregs : display all registers\r\n"
 		.ascii "    setdreg regnum.b val.l : set data register\r\n"
 		.ascii "    setareg regnum.b val.l : set address register\r\n"
-		.ascii "    runat addr.l : resume execution at addr\r\n"
-		.ascii "    resume : resume execution\r\n"
+		.ascii "    runat addr.l : resume execution at addr until trap #0\r\n"
 		.ascii "    disass addr.l count.w : disassemble count instructions from addr\r\n"
 		.ascii "Breakpoints:\r\n"
 		.ascii "    listbps : list all breakpoints\r\n"
 		.ascii "    addbp addr.l index.w : add breakpoint at addr at index (0-7)\r\n"
 		.ascii "    delbp index.w : delete breakpoint at index (0-7)\r\n"
+		.ascii "    resume : resume execution at breakpointed instruction\r\n"
 		.ascii "Other:\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser\r\n"
 		.ascii "    testtransmit : test the ethernet by sending a packet\r\n"
@@ -325,12 +324,8 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		bsr serputstr			| and print it
 		rts
 
-resume:		movem.l savedregisters,%d0-%d7/%a0-%a7
-						| restore all registers
-		sub.l #2,(2,%sp)		| back up pc to re-execute instruction
-		rte
-
-runat:		move.l (0*4,%a1),newpc		| save address to resume at
+runat:		bsr settraps			| set any breakpoints
+		move.l (0*4,%a1),newpc		| save address to resume at
 		movem.l savedregisters,%d0-%d7/%a0-%a7
 						| restore all registers
 		move.l newpc,(2,%sp)		| set pc
@@ -389,6 +384,14 @@ addbp:		move.l (0*4,%a1),%a0		| get address
 delbp:		move.w (0*4+2,%a1),%d0		| get index
 		bsr delbreakpoint
 		rts
+
+| resume execution after a breakpoint trap, by repeating the instruction at the trap that
+| took us into the monitor
+resume:		bsr settraps			| set any breakpoints, exept the resume pc
+		movem.l savedregisters,%d0-%d7/%a0-%a7
+						| restore all registers
+		move.l resumepc,(2,%sp)		| resuming at instruction at old trap
+		rte
 
 		.section .rodata
 		.align 2
