@@ -27,6 +27,7 @@ start:		movea.l #0x01000000,%sp		| 16 MB
 |		bsr vgainit
 |		bsr keyboardinit
 |		bsr mouseinit
+		bsr initbreakpoints		| prepare breakpoint system
 
 		move.w #1024-1,%d0
 		movea.l #0x00008000,%a0
@@ -65,7 +66,7 @@ entry:		movem.l %d0-%d7/%a0-%a7,savedregisters
 		lea (newlinemsg,%pc),%a0	| need a newline
 		bsr serputstr			| and another newline
 
-		bsr cleartraps			| clear any breakpoints set
+		bsr cleartraps			| we want to see the real instructions now
 
 		bsr printregs			| print all registers
 		lea (newlinemsg,%pc),%a0	| need a newline

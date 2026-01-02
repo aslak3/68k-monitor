@@ -8,7 +8,6 @@
 		.align 2
 
 		.global commandarray
-		.global printregs
 
 | command array consists of a command string link and some userdata for
 | each named command. this userdata points to another record which consists
@@ -83,6 +82,8 @@ readcommon:	lea (newlinemsg,%pc),%a0	| need a newline
 
 		.section .text
 		.align 2
+
+		.global printregs
 
 dump:		movea.l (0*4,%a1),%a2		| get the start addr (a2)
 		move.l (1*4,%a1),%d1		| get the length (d1)
@@ -324,13 +325,6 @@ checksum:	movea.l (0*4,%a1),%a0		| get address to read from
 		bsr serputstr			| and print it
 		rts
 
-runat:		bsr settraps			| set any breakpoints
-		move.l (0*4,%a1),newpc		| save address to resume at
-		movem.l savedregisters,%d0-%d7/%a0-%a7
-						| restore all registers
-		move.l newpc,(2,%sp)		| set pc
-		rte
-
 printregs:	movea.l #savedregisters,%a1	| get regs
 		clr.w %d1			| count of reg from 0
 		movea.l #d0msg,%a2		| a0 reg
@@ -387,14 +381,21 @@ delbp:		move.w (0*4+2,%a1),%d0		| get index
 
 | resume execution after a breakpoint trap, by repeating the instruction at the trap that
 | took us into the monitor
-resume:		bsr settraps			| set any breakpoints, exept the resume pc
+resume:		lea (exitmsg,%pc),%a0		| exiting monitor message
+		bsr serputstr			| output it
+		move.l resumepc,%d0		| get the resume pc
+		bsr serputlong			| output it
+		lea (newlinemsg,%pc),%a0	| newline after each
+		bsr serputstr			| output it
+
+		bsr settraps			| set any breakpoints, exept the resume pc
 		movem.l savedregisters,%d0-%d7/%a0-%a7
 						| restore all registers
 		move.l resumepc,(2,%sp)		| resuming at instruction at old trap
 		rte
 
-		.section .rodata
-		.align 2
+runat:		move.l (0*4,%a1),resumepc	| save address to resume at
+		bra resume
 
 | branch target for showing a generic error message
 
@@ -402,17 +403,12 @@ generror:	lea (generrormsg,%pc),%a0
 		bsr serputstr
 		rts
 
-filesizemsg:	.asciz "File size: "
-
-		.section .bss
-		.align 2
-
-newpc:		.space 4			| space for new pc
-
 		.section .rodata
 		.align 2
 
 entercmdmsg:	.asciz "Monitor: > "
+exitmsg:	.asciz "*** Exiting monitor via RTE new PC: "
+filesizemsg:	.asciz "File size: "
 
 generrormsg:	.asciz "Command returned an error\r\n"
 

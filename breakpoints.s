@@ -4,6 +4,7 @@
 		.section .text
 		.align 2
 
+		.global initbreakpoints
 		.global listbreakpoints
 		.global addbreakpoint
 		.global delbreakpoint
@@ -19,6 +20,13 @@
 
 | TODO: change to use trap #15 or similar
 		.equ TRAP_INSTR, 0x4E40		| TRAP instruction opcode TRAP #0
+
+initbreakpoints:movea.l #bplist,%a1		| get start of breakpoint list
+		move.w #BP_COUNT-1,%d1		| 8 breakpoints to clear
+1:		clr.l (BP_ADDRESS,%a1)		| clear the address
+		add.l #BP_SIZE,%a1		| next bp entry
+		dbra %d1,1b			| done them all?
+		rts
 
 | lists all currently set breakpoints
 listbreakpoints:movem.l %d0-%d1/%a1-%a2,-(%sp)
