@@ -33,8 +33,6 @@ commandarray:	checkcommand "readbyte", 3
 		nocheckcommand "memtest"
 		checkcommand "ethdl", 0x80, 3
 		checkcommand "hextobytes" 0x800, 3
-		nocheckcommand "resume"
-		checkcommand "runat", 3
 		nocheckcommand "printregs"
 		checkcommand "setdreg", 1, 3
 		checkcommand "setareg", 1, 3
@@ -42,7 +40,10 @@ commandarray:	checkcommand "readbyte", 3
 		checkcommand "listbps", 0
 		checkcommand "addbp", 3, 2
 		checkcommand "delbp", 2
-
+		nocheckcommand "resume"
+		checkcommand "runat", 3
+		nocheckcommand "traceon"
+		nocheckcommand "traceoff"
 		endcommand 0x400		| table in ram?
 
 		.section .text
@@ -391,11 +392,22 @@ resume:		lea (exitmsg,%pc),%a0		| exiting monitor message
 		bsr settraps			| set any breakpoints, exept the resume pc
 		movem.l savedregisters,%d0-%d7/%a0-%a7
 						| restore all registers
-		move.l resumepc,(2,%sp)		| resuming at instruction at old trap
+		tst.w tracing			| tracing on?
+		beq 1f				| no, normal resume
+		or.w #0x8000,(0,%sp)		| set trace bit
+		bra 2f
+1:		and.w #0x7fff,(0,%sp)		| clear trace bit
+2:		move.l resumepc,(2,%sp)		| resuming at instruction at old trap
 		rte
 
 runat:		move.l (0*4,%a1),resumepc	| save address to resume at
 		bra resume
+
+traceon:	move.w #1,tracing		| set tracing flag
+		rts
+
+traceoff:	move.w #0,tracing		| clear tracing flag
+		rts
 
 | branch target for showing a generic error message
 
@@ -429,3 +441,8 @@ a4msg:		.asciz "A4: "
 a5msg:		.asciz "A5: "
 a6msg:		.asciz "A6: "
 a7msg:		.asciz "A7: "
+
+		.section .bss
+		.align 2
+
+tracing:	.space 2			| tracing flag

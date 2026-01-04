@@ -18,8 +18,7 @@
 
 		.equ BP_COUNT, 8
 
-| TODO: change to use trap #15 or similar
-		.equ TRAP_INSTR, 0x4E40		| TRAP instruction opcode TRAP #0
+		.equ TRAP_INSTR, 0x4e4f		| TRAP instruction opcode TRAP #15
 
 initbreakpoints:movea.l #bplist,%a1		| get start of breakpoint list
 		move.w #BP_COUNT-1,%d1		| 8 breakpoints to clear

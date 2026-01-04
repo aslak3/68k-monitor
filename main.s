@@ -1,4 +1,5 @@
 		.include "include/hardware.i"
+		.include "include/vectors.i"
 
 		.section .text
 		.align 2
@@ -34,8 +35,8 @@ start:		movea.l #0x01000000,%sp		| 16 MB
 1:		move.w #0xff00,(%a0)+
 		dbra %d0,1b
 
-		move.l #0x0101,%d0
-		movec.l %d0,%cacr
+		move.l #0x0101,%d0		| enable data and instruction caches
+		movec.l %d0,%cacr		| set cache control register
 		move.w #0x2000,%sr
 
 		move.b #0,LED
@@ -46,35 +47,28 @@ entry:		movem.l %d0-%d7/%a0-%a7,savedregisters
 						| save all registers
 
 		movea.l #portadevice,%a5	| point a5 to port a device
-		movea.l #trap0msg,%a0		| load address of trap0 message
-		bsr serputstr			| print trap0 message
-		move.l (2,%sp),%d0		| get pc
-		bsr serputlong			| print pc
-		subq.l #2,%d0			| adjust pc to point to trap
-		move.l %d0,resumepc		| save it for breakpoint handling
-		movea.l #srmsg,%a0		| load sr message
-		bsr serputstr			| print sr message
-		move.w (0,%sp),%d0		| get sr
-		bsr serputword			| print sr
-		movea.l #formvectormsg,%a0	| load format/vector message
-		bsr serputstr			| print it
+
+		lea (enteringmsg,%pc),%a0	| print entering monitor message
+		bsr serputstr			| output it
+
+		move.l %sp,%a6			| get stack pointer to access exception frame
+		bsr exceptdetails		| print exception details
+
+		move.l (2,%sp),resumepc		| save pc for breakpoint/trace handling
 		move.w (6,%sp),%d0		| get format/vector
-		| TODO: resolve vector into human readable form for banner
-		bsr serputword			| print it
-		lea (newlinemsg,%pc),%a0	| need a newline
-		bsr serputstr			| and print it
-		lea (newlinemsg,%pc),%a0	| need a newline
-		bsr serputstr			| and another newline
+		and.w #0x0fff,%d0		| get vector address
+		move.w %d0,entryvector		| save it for later use
+		cmp.w #VTRAP15,%d0		| is it a breakpoint trap?
+		bne 1f				| no, skip the next part
+		subq.l #2,resumepc		| adjust pc to point back to trap for breakpoints
 
-		bsr cleartraps			| we want to see the real instructions now
-
-		bsr printregs			| print all registers
-		lea (newlinemsg,%pc),%a0	| need a newline
-		bsr serputstr			| and print it
+1:		bsr cleartraps			| we want to see the real instructions now
 
 		movea.l resumepc,%a0		| get the resume pc
 		move.w #4,%d0			| print four instructions after trap
-		bsr disassemble			| disassemble the instruction at the trap
+		bsr disassemble			| disassemble the instruction at the entry point
+
+		move.w #0,tracing		| clear tracing flag
 
 mainloop:	lea.l (newlinemsg,%pc),%a0	| blank between commands
 		bsr serputstr			| ...
@@ -121,9 +115,7 @@ nocommand:	lea (nocommandmsg,%pc),%a0
 		.section .rodata
 		.align 2
 
-trap0msg:	.asciz "\r\n*** Entering Monitor via Trap #0 PC: "
-srmsg:		.asciz " SR: "
-formvectormsg: 	.asciz " Format/Vector: "
+enteringmsg:	.asciz "\r\n*** Entering Monitor via "
 entercmdmsg:	.asciz "Monitor: > "
 
 parsererrormsg:	.asciz "Parser rror!\r\n"
@@ -134,9 +126,12 @@ badparamsmsg:	.asciz "Bad paramters to command\r\n"
 		.align 2			| longs need aligning
 
 savedregisters:	.space (8*2*4)
+entryvector:	.space 2			| entry vector number
 
 inputbuffer:	.space 256
 cmdbuffer:	.space 256
 typebuffer:	.space 256
 valuebuffer:	.space 256
 stringbuffer:	.space 256
+
+tracing:	.space 2			| tracing flag
