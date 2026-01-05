@@ -4,42 +4,32 @@
 		.section .text
 		.align 2
 
-		.global start
 		.global entry
 		.global savedregisters
 
 start:		movea.l #0x01000000,%sp		| 16 MB
+		move.b #1,LED			| turn on LED while initializing
 
-| clear the first 32MB
+| clear the first 4 MB of memory in 64K*4 blocks
 
 		movea.l #0x00000000,%a0		| start at 0
-		move.w #(((4*1024*1024)/4)/65536)-1,%d1
+		move.w #((4*1024*1024)/(65536*4))-1,%d1
 						| number of 64KB long blocks
-1:		move.w #65536-1,%d0		| 64KB of long words
+1:		move.w #65536-1,%d0		| 64K of long words
 2:		clr.l (%a0)+			| clear it
 		dbra %d0,2b			| back for more
 		dbra %d1,1b			| next 64KB block
 
-		move.b #1,LED
-
 		bsr exceptionsinit		| setup execption handlers
 		bsr serialinit			| prepare the console port
-|		bsr timerinit			| prepare the timer
-|		bsr vgainit
-|		bsr keyboardinit
-|		bsr mouseinit
+		bsr timerinit			| prepare the timer
 		bsr initbreakpoints		| prepare breakpoint system
-
-		move.w #1024-1,%d0
-		movea.l #0x00008000,%a0
-1:		move.w #0xff00,(%a0)+
-		dbra %d0,1b
 
 		move.l #0x0101,%d0		| enable data and instruction caches
 		movec.l %d0,%cacr		| set cache control register
 		move.w #0x2000,%sr
 
-		move.b #0,LED
+		move.b #0,LED			| turn off LED after init
 1:		trap #0				| enter monitor
 		bra 1b				| run loop again
 
@@ -118,14 +108,14 @@ nocommand:	lea (nocommandmsg,%pc),%a0
 enteringmsg:	.asciz "\r\n*** Entering Monitor via "
 entercmdmsg:	.asciz "Monitor: > "
 
-parsererrormsg:	.asciz "Parser rror!\r\n"
+parsererrormsg:	.asciz "Parser error!\r\n"
 nocommandmsg:	.asciz "No such command\r\n"
-badparamsmsg:	.asciz "Bad paramters to command\r\n"
+badparamsmsg:	.asciz "Bad parameters to command\r\n"
 
 		.section .bss
 		.align 2			| longs need aligning
 
-savedregisters:	.space (8*2*4)
+savedregisters:	.space (8*2*4)			| d0-d7/a0-a7 on entry to monitor
 entryvector:	.space 2			| entry vector number
 
 inputbuffer:	.space 256
