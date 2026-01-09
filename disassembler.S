@@ -159,9 +159,9 @@ nextlong:	move.l %d1,-(%sp)		| save d1
 		bsr nextword			| get high word
 		move.w %d0,-(%sp)		| save high word
 		bsr nextword			| get low word
-		move.w (%sp)+,%d1		| restore high word
-		swap %d1			| shift high word up
-		or.l %d1,%d0			| combine to long
+		move.w %d0,-(%sp)		| restore high word
+		move.l (%sp)+,%d0		| get combined long into d0
+		swap %d0			| swap to get word round the right way
 		move.l (%sp)+,%d1		| restore d1
 		rts
 
