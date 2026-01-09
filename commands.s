@@ -77,9 +77,9 @@ readcommon:	lea (newlinemsg,%pc),%a0	| need a newline
 | argument (a byte count). the output includes the location, the hex,
 | and the ascii, with unprintable chars showing as a dot. through this code:
 |
-| a0=the lilne buffer, a1=a string to concatenate, d0=coverted digits,
-| d1=bytes left in total, d2=words or bytes left in this line,
-| d3=up count of d2.
+| d0=coverted digits, d1=bytes left in total, d2=words or bytes left in this line,
+| d3=up count of d2. output is printed with the ser* routines. a5 will be active
+| on port a, at least for now.
 
 		.section .text
 		.align 2
@@ -176,9 +176,6 @@ writelongs:	bsr writeprelim			| setup
 
 | test the parser: output the bytes, words and longs.
 
-		.section .text
-		.align 2
-
 parsertest:	movea.l %a0,%a2			| arg type table into a2
 1:		move.w (%a2)+,%d0		| get the current type
 		beq 2f				| end of list?
@@ -247,7 +244,7 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.ascii "    parsertest [foo.l] [bar.w] [baz.b] ... : test the parser\r\n"
 		.ascii "    testtransmit : test the ethernet by sending a packet\r\n"
 		.ascii "    ethdl filename.s addr.l : download the file over ethernet\r\n"
-		.ascii "    hextobytes addr.l : convert hex string to bytes\r\n"
+		.ascii "    hextobytes hex.s addr.l : convert hex string to bytes\r\n"
 		.ascii "    showticks : show the tick count in 1/44100 seconds\r\n"
 		.ascii "    help : this help.\r\n"
 		.asciz ""
@@ -255,10 +252,10 @@ helpmsg:	.ascii "Memory/IO:\r\n"
 		.section .text
 		.align 2
 
-ethdl:		move.l (1*4,%a1),-(%sp)
-		move.l (0*4,%a1),-(%sp)
-		bsr eth_download
-		lea 8(%sp),%sp
+ethdl:		move.l (1*4,%a1),-(%sp)		| push address to write to
+		move.l (0*4,%a1),-(%sp)		| push filename address
+		bsr eth_download		| do the download
+		lea 8(%sp),%sp			| clean up stack
 		rts
 
 hextobytes:	move.l (0*4,%a1),%a0
@@ -381,12 +378,13 @@ delbp:		move.w (0*4+2,%a1),%d0		| get index
 		rts
 
 | resume execution after a breakpoint trap, by repeating the instruction at the trap that
-| took us into the monitor
+| took us into the monitor. alternatively, this can be used to run the next instruction from
+| a trace exception. on entry, resumepc contains the address to resume at.
 resume:		lea (exitmsg,%pc),%a0		| exiting monitor message
 		bsr serputstr			| output it
 		move.l resumepc,%d0		| get the resume pc
 		bsr serputlong			| output it
-		lea (newlinemsg,%pc),%a0	| newline after each
+		lea (newlinemsg,%pc),%a0	| newline after
 		bsr serputstr			| output it
 
 		bsr settraps			| set any breakpoints, exept the resume pc
@@ -397,7 +395,7 @@ resume:		lea (exitmsg,%pc),%a0		| exiting monitor message
 		or.w #0x8000,(0,%sp)		| set trace bit
 		bra 2f
 1:		and.w #0x7fff,(0,%sp)		| clear trace bit
-2:		move.l resumepc,(2,%sp)		| resuming at instruction at old trap
+2:		move.l resumepc,(2,%sp)		| resuming at instruction calculated
 		rte
 
 runat:		move.l (0*4,%a1),resumepc	| save address to resume at
@@ -418,7 +416,6 @@ generror:	lea (generrormsg,%pc),%a0
 		.section .rodata
 		.align 2
 
-entercmdmsg:	.asciz "Monitor: > "
 exitmsg:	.asciz "*** Exiting monitor via RTE new PC: "
 filesizemsg:	.asciz "File size: "
 
