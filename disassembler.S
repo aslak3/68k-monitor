@@ -266,36 +266,30 @@ condsub:	move.w %d2,%d0			| copy original instruction word
 
 | prints any embedded data (a nybble) at 3-0, with a leading hash. this is used by trap
 | at least
-data30sub:	move.l %d2,-(%sp)
-		move.b #'#',%d0			| output '#'
+data30sub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w %d2,%d0			| copy original instruction word
 		and.w #0xf,%d0			| mask to 4 bits
 		bsr hexbyte			| output the nybble sorta
-		move.l (%sp)+,%d2
 		rts
 
 | prints 3 bits of embedded data at 11-9, with a leading hash. this is used by addq, subq and
 | the immediate rotations
-data119sub:	move.l %d2,-(%sp)
-		move.b #'#',%d0			| output '#'
+data119sub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.w %d2,%d0			| copy original instruction word
 		lsr.w #8,%d0			| shift most of the way
 		lsr.w #1,%d0			| get the data at 11-9
 		and.w #0x7,%d0			| mask to 3 bits
 		bsr hexbyte			| output the nybble sorta
-		move.l (%sp)+,%d2
 		rts
 
 | prints the embedded byte at 7-0. this is used by moveq. note that branching does its own
 | thing, since the branch might be escaped into a following word
-data70sub:	move.l %d2,-(%sp)
-		move.b #'#',%d0			| output '#'
+data70sub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		move.b %d2,%d0			| copy original instruction word
 		bsr hexbyte			| output the byte
-		move.l (%sp)+,%d2
 		rts
 
 | prints the trailing byte in the instruction stream, used by things like ori
