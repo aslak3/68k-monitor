@@ -817,7 +817,7 @@ instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111
 			null, width6sub, moderightsub, movemsub
 
 		instruction lea,       "lea",       0b0100000111000000, 0b1111000111000000, \
-			null, widthwordsub, moderightsub, addrreg119sub
+			null, null, moderightsub, addrreg119sub
 		instruction suba,      "suba",      0b1001000011000000, 0b1111000011000000, \
 			null, width8sub, moderightsub, addrreg119sub
 		instruction cmpa,      "cmpa",      0b1011000011000000, 0b1111000011000000, \
