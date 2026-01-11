@@ -256,6 +256,10 @@ dispsub:	movem.l %d1/%a1,-(%sp)
 		movem.l (%sp)+,%d1/%a1
 		rts
 
+| prints the word wide displacement for db(bra)
+dbdispsub:	clr.b %d2			| force a 0 byte to simulate a bra.s
+		bra dispsub			| finish
+
 | prints a condition as obtained from bit 11-8, such as gt, eq, ne etc
 condsub:	move.w %d2,%d0			| copy original instruction word
 		lsr.w #6,%d0			| shift most of the way
@@ -300,7 +304,7 @@ immbytesub:	move.b #'#',%d0			| output '#'
 		rts
 
 | prints the trailing word in the instruction stream, used by things like ori but also
-| stop, dbra (for its displacement), and some others
+| stop, and some others
 immwordsub:	move.b #'#',%d0			| output '#'
 		bsr serputchar			| output it
 		bsr nextword			| get the word
@@ -829,7 +833,7 @@ instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111
 			null, widthwordsub, moderightsub, datareg119sub
 
 		instruction dbcc,      "db",        0b0101000011001000, 0b1111000011111000, \
-			condsub, null, dataregsub, immwordsub
+			condsub, null, dataregsub, dbdispsub
 		instruction scc,       "s",         0b0101000011000000, 0b1111000011000000, \
 			condsub, null, null, moderightsub
 		instruction bra,       "bra",       0b0110000000000000, 0b1111111100000000, \
