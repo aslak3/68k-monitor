@@ -183,21 +183,28 @@ widthlongsub:	movea.l #longwidthstr,%a0	| get the width
 		moveq #1,%d6			| set d6 means long width
 		rts
 
+| haandles the case when the two bit width is 11
+widthbadsub:	movea.l #badinstmsg, %a0	| get the bad width
+		bsr serputstr			| print the width <bad...>)
+		rts
+
 | prints a width (.b, .w or .l) from bits 7-6 in the instruction word
 width76sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bits 7-6
-		and.w #0xc,%d2			| mask to 2 bits
-		lea (%d2.w,bytewidthstr),%a0	| get width string (3 modes bwl)
-		bsr serputstr			| print it
+		and.w #0xc,%d2			| mask to 2 bits, shifted up 2
+		movea.l #bytesubptr,%a0		| set the base of the small table
+		movea.l (%d2.w,%a0),%a0		| call width printer (might have side effects)
+		jsr (%a0)
 		move.l (%sp)+,%d2
 		rts
 
 | prints a width (.w or .l) from bit 6 in the instruction word
 width6sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bit 6
-		and.w #0x4,%d2			| mask to 1 bit
-		lea (%d2.w,wordwidthstr),%a0	| get width string (all 3 modes bwl)
-		bsr serputstr			| print it
+		and.w #0x4,%d2			| mask to 1 bit, shifted up 2
+		movea.l #wordsubptr,%a0		| set the base of the very small table
+		movea.l (%d2.w,%a0),%a0		| call width printer (might have side effects)
+		jsr (%a0)
 		move.l (%sp)+,%d2
 		rts
 
@@ -205,8 +212,9 @@ width6sub:	move.l %d2,-(%sp)
 width8sub:	move.l %d2,-(%sp)
 		lsr.w #6,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
-		lea (%d2.w,wordwidthstr),%a0	| get width string (2 modes wl)
-		bsr serputstr			| print it
+		movea.l #wordsubptr,%a0		| set the base of the very small table
+		movea.l (%d2.w,%a0),%a0		| call width printer (might have side effects)
+		jsr (%a0)
 		move.l (%sp)+,%d2
 		rts
 
@@ -930,11 +938,14 @@ instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111
 
 		.long 0				| end of table
 
-| each must be 4 bytes long
-nullwidthstr:	.ascii "\0\0\0\0"
-bytewidthstr:	.ascii ".b\0\0"
-wordwidthstr:	.ascii ".w\0\0"
-longwidthstr:	.ascii ".l\0\0"
+bytewidthstr:	.asciz ".b"
+wordwidthstr:	.asciz ".w"
+longwidthstr:	.asciz ".l"
+
+bytesubptr:	.long widthbytesub
+wordsubptr:	.long widthwordsub
+		.long widthlongsub
+		.long widthbadsub
 
 hex:		.asciz "0x"
 
