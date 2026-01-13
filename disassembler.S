@@ -22,7 +22,7 @@
 
 | output routine for the disassembler
 
-| putchar routine for printing instuctions; char in d0, buffer is held in "device" pointer at
+| putchar routine for printing instructions; char in d0, buffer is held in "device" pointer at
 | a5. the buffer structure also holds a current position counter at offset 8
 instrputchar:	move.w %d1,-(%sp)		| save d1
 		move.w (DEVICE_CURPOS,%a5),%d1	| get counter to current byte in d1
@@ -193,8 +193,8 @@ width76sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bits 7-6
 		and.w #0xc,%d2			| mask to 2 bits, shifted up 2
 		movea.l #bytesubptr,%a0		| set the base of the small table
-		movea.l (%d2.w,%a0),%a0		| call width printer (might have side effects)
-		jsr (%a0)
+		movea.l (%d2.w,%a0),%a0		| calling width printer (might have side effects)
+		jsr (%a0)			| call it
 		move.l (%sp)+,%d2
 		rts
 
@@ -203,8 +203,8 @@ width6sub:	move.l %d2,-(%sp)
 		lsr.w #4,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit, shifted up 2
 		movea.l #wordsubptr,%a0		| set the base of the very small table
-		movea.l (%d2.w,%a0),%a0		| call width printer (might have side effects)
-		jsr (%a0)
+		movea.l (%d2.w,%a0),%a0		| calling width printer (might have side effects)
+		jsr (%a0)			| call it
 		move.l (%sp)+,%d2
 		rts
 
@@ -213,8 +213,8 @@ width8sub:	move.l %d2,-(%sp)
 		lsr.w #6,%d2			| get bit 6
 		and.w #0x4,%d2			| mask to 1 bit
 		movea.l #wordsubptr,%a0		| set the base of the very small table
-		movea.l (%d2.w,%a0),%a0		| call width printer (might have side effects)
-		jsr (%a0)
+		movea.l (%d2.w,%a0),%a0		| calling width printer (might have side effects)
+		jsr (%a0)			| call it
 		move.l (%sp)+,%d2
 		rts
 
@@ -389,11 +389,11 @@ immbwlsub:	move.l %d2,-(%sp)
 		lsr.w #6,%d2			| get bits 7-6
 		and.w #0x3,%d2			| mask to 2 bits
 
-		cmp.w #0b00,%d2		| byte?
+		cmp.w #0b00,%d2			| byte?
 		beq 1f				| yes, byte
-		cmp.w #0b01,%d2		| word?
+		cmp.w #0b01,%d2			| word?
 		beq 2f				| yes, word
-		cmp.w #0b10,%d2		| long?
+		cmp.w #0b10,%d2			| long?
 		beq 3f				| yes, long
 
 		movea.l #badinstmsg,%a0		| bad width
@@ -495,7 +495,11 @@ bad:		movea.l #badinstmsg,%a0		| bad width
 
 todo:		movea.l #todoinstmsg,%a0	| outputting instr or mode not yet done
 		bsr serputstr			| output todo instruction message
-		bra .endinst			| add a newline and continue
+		bra 100f			| add a newline and continue
+
+ohtwenty:	movea.l #ohtwentymsg,%a0	| this is a 020+ addressing mode
+		bsr serputstr			| output the message
+		bra 100f			| add a newline etc
 
 | we can also call directly into these, since it only relies on d2 being set. note that
 | d2 and d3 are both stacked as it would be if one of the entry points above was used.
@@ -547,6 +551,8 @@ addrregidispsub:movem.l %d2-%d3,-(%sp)
 7:		move.b #'(',%d0			| add '(' before extension word
 		bsr serputchar			| output '(')'
 		bsr nextword			| get the extension word
+		btst #8,%d0			| testing for 68020+ extension word
+		bne ohtwenty			| 020+ bit set so don't continue, print diag
 		move.w %d0,%d4			| get the extension word where we want it
 		move.w %d4,%d0			| copy for processing offfset
 		and.w #0x00ff,%d0		| mask to low byte
@@ -704,7 +710,7 @@ instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111
 			null, widthbytesub, immbytesub, ccrsub
 		instruction andi_sr,   "andi",      0b0000001001111100, 0b1111111111111111, \
 			null, widthwordsub, immwordsub, srsub
-		instruction andi_ea,   "andi"       0b0000001000000000, 0b1111111100000000, \
+		instruction andi_ea,   "andi",      0b0000001000000000, 0b1111111100000000, \
 			null, width76sub, immbwlsub, moderightsub
 
 		instruction subi_ea,   "subi",      0b0000010000000000, 0b1111111100000000, \
@@ -878,11 +884,11 @@ instructions:	instruction ori_ccr,   "ori",	    0b0000000000111100, 0b1111111111
 		instruction subq,      "subq",      0b0101000100000000, 0b1111000100000000, \
 			null, width76sub, data119sub, moderightsub
 
-		instruction exg_dd,    "exg"        0b1100000101000000, 0b1111000111111000, \
+		instruction exg_dd,    "exg",       0b1100000101000000, 0b1111000111111000, \
 			null, null, datareg119sub, dataregsub
-		instruction exg_aa,    "exg"        0b1100000101001000, 0b1111000111111000, \
+		instruction exg_aa,    "exg",       0b1100000101001000, 0b1111000111111000, \
 			null, null, addrreg119sub, addrregsub
-		instruction exg_da,    "exg"        0b1100000110001000, 0b1111000111111000, \
+		instruction exg_da,    "exg",       0b1100000110001000, 0b1111000111111000, \
 			null, null, datareg119sub, addrregsub
 
 		instruction or_wr,     "or",        0b1000000000000000, 0b1111000100000000, \
@@ -977,6 +983,7 @@ a7regstr:	.asciz "%a7"
 
 		.align 4
 
+| each condition is always 4 bytes
 allcondstr:	.ascii "t\0\0\0"
 		.ascii "f\0\0\0"
 		.ascii "hi\0\0"
@@ -1001,6 +1008,7 @@ allshiftdirstr:	.asciz "r"
 
 badinstmsg:	.asciz "<bad instruction>"
 todoinstmsg:	.asciz "<todo instruction>"
+ohtwentymsg:	.asciz "<68020+ extension word>"
 
 		.section .bss
 		.align 2
